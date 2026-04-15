@@ -16,12 +16,24 @@
 #include <math.h>
 #include <conio.h>
 
+#include <string>
+#include <exception>
+
 #include "SphinxLib.h"   // include SphinxLib header file
-#include "darknoise.h"  
+#include "darknoise.h"
 #include "bayer.h"
+#include "wrist.h"
+#include "tcp_server.h"
 
 #define RING_BUFFER  1
 #define BUFFER_COUNT 4
+
+// Wrist-estimation + broadcast configuration.
+static const char* WRIST_MODEL_PATH        = "hand_landmark_full.onnx";
+static const float WRIST_FOREARM_AXIS_DEG  = 0.0f;   // direction of forearm in image (deg, +X = 0)
+static const float WRIST_NEUTRAL_THRESH_DEG = 5.0f;  // |angle| <= this -> "neutral"
+static const bool  WRIST_FLIP_SIGN         = false;
+static const uint16_t TCP_PORT             = 5555;
 
 typedef struct
 {
@@ -470,9 +482,25 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
   BYTE* image = NULL;
   BYTE* darknoise_img = NULL;
   BYTE* darknoise_img_alloc = NULL;
+  BYTE* rgb_live = NULL;  // demosaiced live frame for inference (Bayer cameras only)
   INT64 old_exposure_time;
   int dark_init_counter = 0;
   bool fpn;
+  bool is_bayer = false;
+  int bayer_order = 0;
+
+  WristEstimator* wrist = NULL;
+  TcpBroadcaster* tcp = NULL;
+  try {
+    wrist = new WristEstimator(WRIST_MODEL_PATH, WRIST_FOREARM_AXIS_DEG,
+                               WRIST_NEUTRAL_THRESH_DEG, WRIST_FLIP_SIGN);
+    printf("[INFO] - Wrist model loaded: %s\n", WRIST_MODEL_PATH);
+  } catch (const std::exception& e) {
+    printf("[ERROR] - Failed to load wrist model (%s): %s\n", WRIST_MODEL_PATH, e.what());
+    printf("[INFO] - Continuing without wrist estimation.\n");
+  }
+  tcp = new TcpBroadcaster(TCP_PORT);
+  printf("[INFO] - TCP broadcaster on 127.0.0.1:%u\n", (unsigned)TCP_PORT);
 
   ppixel[0] = NULL;
 
@@ -534,6 +562,13 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
   if (0 == strncmp(model, "GVRD-MRC HighSpeed", 255))
       fpn = true;
   else fpn = false;
+
+  if (pixelFormat == GVSP_PIX_BAYGR8 || pixelFormat == GVSP_PIX_BAYRG8) {
+    is_bayer = true;
+    bayer_order = (pixelFormat == GVSP_PIX_BAYGR8) ? BAYER_COLOR_FILTER_GBRG
+                                                   : BAYER_COLOR_FILTER_BGGR;
+    rgb_live = (BYTE*)malloc((size_t)width * height * 3);
+  }
 
 
 #ifdef RING_BUFFER
@@ -666,6 +701,27 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
        }
     }
 
+    // wrist estimation + TCP broadcast
+    if (wrist) {
+      const BYTE* infer_buf = image;
+      int infer_channels = 1;
+      if (is_bayer && rgb_live) {
+        bayer_Bilinear(image, rgb_live, width, height, bayer_order);
+        infer_buf = rgb_live;
+        infer_channels = 3;
+      }
+      try {
+        WristResult wr = wrist->Estimate(infer_buf, width, height, infer_channels,
+                                         (uint64_t)img_header.FrameCounter,
+                                         (uint64_t)img_header.TimeStamp);
+        std::string js = wrist->ToJson(wr);
+        if (tcp) tcp->Broadcast(js);
+        printf("[WRIST] - %s\n", js.c_str());
+      } catch (const std::exception& e) {
+        printf("[ERROR] - Wrist inference failed: %s\n", e.what());
+      }
+    }
+
 #ifdef RING_BUFFER
     GEVQueueRingBuffer(dparams->Device, index);
 #endif
@@ -708,6 +764,12 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
 
   if (image_alloc != NULL)
     free(image_alloc);
+
+  if (rgb_live != NULL)
+    free(rgb_live);
+
+  delete wrist;
+  delete tcp;
   
 #ifdef RING_BUFFER
   // free ring buffer memory
