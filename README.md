@@ -45,7 +45,16 @@ Dependencies are declared in `ConsoleDemo_FPN/vcpkg.json` (manifest mode). MSBui
 
 ### Hand landmark model
 
-Download or convert a MediaPipe Hands landmark model to ONNX and place it next to the built `ConsoleDemo.exe` as `hand_landmark_full.onnx` (or change `WRIST_MODEL_PATH` at the top of `ConsoleDemo.cpp`). Expected I/O: 1×224×224×3 float input in `[0,1]`, output containing 21 landmarks (63 floats) and an optional 1-element score tensor.
+A pre-converted **`hand_landmark_full.onnx`** (~11 MB, derived from MediaPipe Hands' official `hand_landmark_full.tflite`) is checked into `ConsoleDemo_FPN/hand_landmark_full.onnx`. Copy it next to the built `ConsoleDemo.exe`, or change `WRIST_MODEL_PATH` at the top of `ConsoleDemo.cpp` to point at it directly.
+
+To regenerate it (e.g. with a different MediaPipe revision):
+
+```bat
+pip install tflite2onnx onnx
+python ConsoleDemo_FPN\scripts\prepare_hand_landmark_model.py
+```
+
+Model I/O: input `input_1` `[1,3,224,224]` float in `[0,1]`; outputs `Identity` `[1,63]` (21 image-space landmarks ×3) and a 1-element hand-presence score. The estimator auto-detects which output is which.
 
 ## Build
 

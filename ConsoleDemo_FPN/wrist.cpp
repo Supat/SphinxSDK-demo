@@ -62,13 +62,22 @@ struct WristEstimator::Impl {
       output_names.emplace_back(n.get());
     }
     // heuristic: 21x3=63-element output is the landmarks; a 1-element output is the score.
+    // Prefer the FIRST match: MediaPipe Hands exports list image-space landmarks
+    // (Identity) before the world-space ones (Identity_3), and the hand-presence
+    // score before the handedness score.
+    bool got_lm = false, got_score = false;
     for (size_t i = 0; i < n_out; ++i) {
       auto info = session->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo();
       auto shp = info.GetShape();
       int64_t total = 1;
       for (auto d : shp) total *= (d > 0 ? d : 1);
-      if (total == kNumLandmarks * 3) landmark_output_idx = static_cast<int>(i);
-      else if (total == 1) score_output_idx = static_cast<int>(i);
+      if (!got_lm && total == kNumLandmarks * 3) {
+        landmark_output_idx = static_cast<int>(i);
+        got_lm = true;
+      } else if (!got_score && total == 1) {
+        score_output_idx = static_cast<int>(i);
+        got_score = true;
+      }
     }
   }
 };
