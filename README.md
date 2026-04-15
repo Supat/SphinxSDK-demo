@@ -43,18 +43,23 @@ C:\vcpkg\vcpkg integrate install
 
 Dependencies are declared in `ConsoleDemo_FPN/vcpkg.json` (manifest mode). MSBuild auto-restores `opencv4` and `onnxruntime` for `x64-windows` on first build.
 
-### Hand landmark model
+### Hand + pose models
 
-A pre-converted **`hand_landmark_full.onnx`** (~11 MB, derived from MediaPipe Hands' official `hand_landmark_full.tflite`) is checked into `ConsoleDemo_FPN/hand_landmark_full.onnx`. Copy it next to the built `ConsoleDemo.exe`, or change `WRIST_MODEL_PATH` at the top of `ConsoleDemo.cpp` to point at it directly.
+Two pre-converted ONNX models are checked into `ConsoleDemo_FPN/`:
 
-To regenerate it (e.g. with a different MediaPipe revision):
+- **`hand_landmark_full.onnx`** (~11 MB) — MediaPipe Hands; 21 hand landmarks. Drives the wrist-vector calculation.
+- **`pose_landmark_full.onnx`** (~13 MB) — MediaPipe Pose; 33 body landmarks. Used to detect the **forearm direction** (elbow → wrist) so the wrist angle is measured against the actual forearm rather than a fixed reference.
+
+Copy both next to the built `ConsoleDemo.exe`, or change `WRIST_MODEL_PATH` / `POSE_MODEL_PATH` at the top of `ConsoleDemo.cpp` to absolute paths.
+
+The pose estimator picks whichever side (left or right) has higher elbow+wrist visibility above `POSE_MIN_VISIBILITY` (default 0.5). If neither side is visible enough, the wrist estimator falls back to the static `WRIST_FOREARM_AXIS_DEG`. Each frame's JSON includes a `forearm` block reporting which axis was used.
+
+To regenerate the models (e.g. with a different MediaPipe revision):
 
 ```bat
-pip install tflite2onnx onnx
-python ConsoleDemo_FPN\scripts\prepare_hand_landmark_model.py
+pip install tf2onnx tensorflow onnx tflite2onnx
+python ConsoleDemo_FPN\scripts\prepare_models.py
 ```
-
-Model I/O: input `input_1` `[1,3,224,224]` float in `[0,1]`; outputs `Identity` `[1,63]` (21 image-space landmarks ×3) and a 1-element hand-presence score. The estimator auto-detects which output is which.
 
 ## Build
 
@@ -112,8 +117,10 @@ A live OpenCV preview window opens during acquisition showing the camera frame w
 Sample line:
 
 ```json
-{"frame":1234,"timestamp":987654321,"valid":true,"angle_deg":12.341,"class":"extensor","confidence":0.972}
+{"frame":1234,"timestamp":987654321,"valid":true,"angle_deg":12.341,"class":"extensor","confidence":0.972,"forearm":{"axis_deg":-3.215,"source":"left_forearm","confidence":0.91}}
 ```
+
+`forearm.source` is `left_forearm` or `right_forearm` when pose tracking succeeded, or `static` when it fell back to `WRIST_FOREARM_AXIS_DEG`.
 
 ## Repository layout
 

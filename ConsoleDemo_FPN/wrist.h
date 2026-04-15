@@ -14,6 +14,8 @@ struct WristResult {
   int src_width;
   int src_height;
   float forearm_axis_deg;  // copied from the estimator for overlay drawing
+  const char* forearm_source;  // "static" | "left_forearm" | "right_forearm"
+  float forearm_confidence;
 };
 
 class WristEstimator {
@@ -26,6 +28,12 @@ public:
 
   WristEstimator(const WristEstimator&) = delete;
   WristEstimator& operator=(const WristEstimator&) = delete;
+
+  // Override the forearm-axis reference (e.g. from a pose tracker). source/conf
+  // are echoed into WristResult and the JSON output. Pass source="static" to
+  // restore the configured constant axis.
+  void SetForearmAxis(float deg, const char* source = "static",
+                      float confidence = 1.0f);
 
   // image is 1-channel grayscale (channels=1) or 3-channel BGR (channels=3).
   WristResult Estimate(const uint8_t* image, int width, int height, int channels,

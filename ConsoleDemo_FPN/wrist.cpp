@@ -39,6 +39,8 @@ struct WristEstimator::Impl {
   float forearm_axis_deg;
   float neutral_threshold_deg;
   bool flip_sign;
+  const char* forearm_source = "static";
+  float forearm_confidence = 1.0f;
 
   Impl(const std::string& model_path, float axis, float thresh, bool flip)
       : forearm_axis_deg(axis), neutral_threshold_deg(thresh), flip_sign(flip) {
@@ -89,6 +91,12 @@ WristEstimator::WristEstimator(const std::string& model_path,
     : p_(new Impl(model_path, forearm_axis_deg, neutral_threshold_deg, flip_sign)) {}
 
 WristEstimator::~WristEstimator() { delete p_; }
+
+void WristEstimator::SetForearmAxis(float deg, const char* source, float confidence) {
+  p_->forearm_axis_deg = deg;
+  p_->forearm_source = source ? source : "static";
+  p_->forearm_confidence = confidence;
+}
 
 WristResult WristEstimator::Estimate(const uint8_t* image, int width, int height,
                                      int channels, uint64_t frame, uint64_t timestamp) {
@@ -165,6 +173,8 @@ WristResult WristEstimator::Estimate(const uint8_t* image, int width, int height
   r.src_width = width;
   r.src_height = height;
   r.forearm_axis_deg = p_->forearm_axis_deg;
+  r.forearm_source = p_->forearm_source;
+  r.forearm_confidence = p_->forearm_confidence;
 
   // Landmarks come back in input-pixel space [0, kInputSize]. Scale to source pixels.
   const float sx = static_cast<float>(width) / kInputSize;
@@ -250,13 +260,17 @@ void ShowWristPreview(const uint8_t* image, int width, int height, int channels,
 }
 
 std::string WristEstimator::ToJson(const WristResult& r) const {
-  char buf[256];
+  char buf[384];
   std::snprintf(buf, sizeof(buf),
                 "{\"frame\":%llu,\"timestamp\":%llu,\"valid\":%s,"
-                "\"angle_deg\":%.3f,\"class\":\"%s\",\"confidence\":%.3f}",
+                "\"angle_deg\":%.3f,\"class\":\"%s\",\"confidence\":%.3f,"
+                "\"forearm\":{\"axis_deg\":%.3f,\"source\":\"%s\",\"confidence\":%.3f}}",
                 static_cast<unsigned long long>(r.frame),
                 static_cast<unsigned long long>(r.timestamp),
                 r.valid ? "true" : "false",
-                r.angle_deg, r.class_name, r.confidence);
+                r.angle_deg, r.class_name, r.confidence,
+                r.forearm_axis_deg,
+                r.forearm_source ? r.forearm_source : "static",
+                r.forearm_confidence);
   return std::string(buf);
 }

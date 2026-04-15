@@ -174,6 +174,9 @@
     <ClCompile Include="wrist.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="pose.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="tcp_server.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -195,6 +198,7 @@
     <ClInclude Include="bayer.h" />
     <ClInclude Include="darknoise.h" />
     <ClInclude Include="wrist.h" />
+    <ClInclude Include="pose.h" />
     <ClInclude Include="tcp_server.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

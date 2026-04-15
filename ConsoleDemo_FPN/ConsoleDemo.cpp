@@ -23,6 +23,7 @@
 #include "darknoise.h"
 #include "bayer.h"
 #include "wrist.h"
+#include "pose.h"
 #include "tcp_server.h"
 
 #define RING_BUFFER  1
@@ -30,7 +31,9 @@
 
 // Wrist-estimation + broadcast configuration.
 static const char* WRIST_MODEL_PATH        = "hand_landmark_full.onnx";
-static const float WRIST_FOREARM_AXIS_DEG  = 0.0f;   // direction of forearm in image (deg, +X = 0)
+static const char* POSE_MODEL_PATH         = "pose_landmark_full.onnx";  // optional; used to track forearm
+static const float WRIST_FOREARM_AXIS_DEG  = 0.0f;   // fallback forearm axis when pose tracking fails
+static const float POSE_MIN_VISIBILITY     = 0.5f;   // require this much elbow+wrist visibility
 static const float WRIST_NEUTRAL_THRESH_DEG = 5.0f;  // |angle| <= this -> "neutral"
 static const bool  WRIST_FLIP_SIGN         = false;
 static const bool  WRIST_SHOW_PREVIEW      = true;   // OpenCV imshow window with overlay
@@ -491,6 +494,7 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
   int bayer_order = 0;
 
   WristEstimator* wrist = NULL;
+  PoseEstimator* pose = NULL;
   TcpBroadcaster* tcp = NULL;
   try {
     wrist = new WristEstimator(WRIST_MODEL_PATH, WRIST_FOREARM_AXIS_DEG,
@@ -499,6 +503,14 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
   } catch (const std::exception& e) {
     printf("[ERROR] - Failed to load wrist model (%s): %s\n", WRIST_MODEL_PATH, e.what());
     printf("[INFO] - Continuing without wrist estimation.\n");
+  }
+  try {
+    pose = new PoseEstimator(POSE_MODEL_PATH, POSE_MIN_VISIBILITY);
+    printf("[INFO] - Pose model loaded: %s (forearm tracking enabled)\n", POSE_MODEL_PATH);
+  } catch (const std::exception& e) {
+    printf("[INFO] - Pose model not loaded (%s): %s\n", POSE_MODEL_PATH, e.what());
+    printf("[INFO] - Falling back to static forearm axis = %.1f deg.\n",
+           WRIST_FOREARM_AXIS_DEG);
   }
   tcp = new TcpBroadcaster(TCP_PORT);
   printf("[INFO] - TCP broadcaster on 127.0.0.1:%u\n", (unsigned)TCP_PORT);
@@ -717,7 +729,23 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
       wr.class_name = "neutral";
       wr.src_width = width;
       wr.src_height = height;
+      wr.forearm_source = "static";
+      wr.forearm_axis_deg = WRIST_FOREARM_AXIS_DEG;
       if (wrist) {
+        // Try to track the forearm; fall back to the configured static axis.
+        if (pose) {
+          try {
+            ForearmResult fr = pose->Estimate(infer_buf, width, height, infer_channels);
+            if (fr.valid) {
+              wrist->SetForearmAxis(fr.angle_deg, fr.source, fr.confidence);
+            } else {
+              wrist->SetForearmAxis(WRIST_FOREARM_AXIS_DEG, "static", 1.0f);
+            }
+          } catch (const std::exception& e) {
+            printf("[ERROR] - Pose inference failed: %s\n", e.what());
+            wrist->SetForearmAxis(WRIST_FOREARM_AXIS_DEG, "static", 1.0f);
+          }
+        }
         try {
           wr = wrist->Estimate(infer_buf, width, height, infer_channels,
                                (uint64_t)img_header.FrameCounter,
@@ -781,6 +809,7 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
     free(rgb_live);
 
   delete wrist;
+  delete pose;
   delete tcp;
   
 #ifdef RING_BUFFER
