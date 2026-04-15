@@ -11,6 +11,19 @@ A Windows C++ console demo for the **MRC Systems Sphinx SDK** (`SphinxLib`). It 
 - A hand-landmark ONNX model (e.g. MediaPipe Hands `hand_landmark_full.onnx`, 224×224 RGB input, 21 landmarks output)
 - A GigE Vision camera reachable on a network adapter on the host (the FPN code path activates only for `DeviceModelName == "GVRD-MRC HighSpeed"`)
 
+## Quick start (Windows)
+
+From an elevated PowerShell or Developer Command Prompt:
+
+```bat
+git clone git@github.com:Supat/SphinxSDK-demo.git
+cd SphinxSDK-demo
+scripts\setup.bat
+scripts\build.bat
+```
+
+`setup.bat` clones+bootstraps vcpkg (default `C:\vcpkg`, override with `-VcpkgRoot`), installs `opencv4` + `onnxruntime` for `x64-windows`, integrates with MSBuild, and verifies the Sphinx SDK is at `..\SphinxLib\` (it cannot auto-install it — see below). `build.bat` invokes MSBuild for `Release|x64` and copies the bundled ONNX models next to the resulting `ConsoleDemo.exe`.
+
 ## Install dependencies
 
 The project links against `SphinxLib.lib`, which ships with the Sphinx SDK. The `.vcxproj` expects it as a **sibling directory** to this repo:
