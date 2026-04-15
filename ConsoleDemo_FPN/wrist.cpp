@@ -153,10 +153,91 @@ WristResult WristEstimator::Estimate(const uint8_t* image, int width, int height
   r.valid = true;
   r.angle_deg = angle;
   r.confidence = score;
+  r.src_width = width;
+  r.src_height = height;
+  r.forearm_axis_deg = p_->forearm_axis_deg;
+
+  // Landmarks come back in input-pixel space [0, kInputSize]. Scale to source pixels.
+  const float sx = static_cast<float>(width) / kInputSize;
+  const float sy = static_cast<float>(height) / kInputSize;
+  for (int i = 0; i < kNumLandmarks; ++i) {
+    r.landmarks_xy[i * 2 + 0] = lm[i * 3 + 0] * sx;
+    r.landmarks_xy[i * 2 + 1] = lm[i * 3 + 1] * sy;
+  }
+
   if (angle > p_->neutral_threshold_deg) r.class_name = "extensor";
   else if (angle < -p_->neutral_threshold_deg) r.class_name = "flexor";
   else r.class_name = "neutral";
   return r;
+}
+
+namespace {
+// MediaPipe Hands skeleton edges.
+constexpr int kEdges[][2] = {
+    {0,1},{1,2},{2,3},{3,4},
+    {0,5},{5,6},{6,7},{7,8},
+    {0,9},{9,10},{10,11},{11,12},
+    {0,13},{13,14},{14,15},{15,16},
+    {0,17},{17,18},{18,19},{19,20},
+    {5,9},{9,13},{13,17}};
+}  // namespace
+
+void ShowWristPreview(const uint8_t* image, int width, int height, int channels,
+                      const WristResult& r, const char* window_name) {
+  cv::Mat bgr;
+  if (channels == 1) {
+    cv::Mat gray(height, width, CV_8UC1, const_cast<uint8_t*>(image));
+    cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+  } else if (channels == 3) {
+    bgr = cv::Mat(height, width, CV_8UC3, const_cast<uint8_t*>(image)).clone();
+  } else {
+    return;
+  }
+
+  if (r.valid) {
+    for (const auto& e : kEdges) {
+      cv::Point a(cvRound(r.landmarks_xy[e[0]*2+0]), cvRound(r.landmarks_xy[e[0]*2+1]));
+      cv::Point b(cvRound(r.landmarks_xy[e[1]*2+0]), cvRound(r.landmarks_xy[e[1]*2+1]));
+      cv::line(bgr, a, b, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+    }
+    for (int i = 0; i < 21; ++i) {
+      cv::Point p(cvRound(r.landmarks_xy[i*2+0]), cvRound(r.landmarks_xy[i*2+1]));
+      cv::circle(bgr, p, 4, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
+    }
+
+    // Wrist -> middle MCP arrow (the angle vector).
+    cv::Point wrist(cvRound(r.landmarks_xy[0]),  cvRound(r.landmarks_xy[1]));
+    cv::Point mid  (cvRound(r.landmarks_xy[18]), cvRound(r.landmarks_xy[19]));
+    cv::arrowedLine(bgr, wrist, mid, cv::Scalar(255, 255, 0), 3, cv::LINE_AA, 0, 0.15);
+
+    // Reference forearm axis from the wrist (yellow), same length as the hand vector.
+    float dx = static_cast<float>(mid.x - wrist.x);
+    float dy = static_cast<float>(mid.y - wrist.y);
+    float len = std::sqrt(dx * dx + dy * dy);
+    float ax_rad = r.forearm_axis_deg * 3.14159265358979323846f / 180.0f;
+    cv::Point ref(wrist.x + cvRound(std::cos(ax_rad) * len),
+                  wrist.y - cvRound(std::sin(ax_rad) * len));  // y flipped for image coords
+    cv::arrowedLine(bgr, wrist, ref, cv::Scalar(0, 255, 255), 2, cv::LINE_AA, 0, 0.15);
+  }
+
+  // HUD text.
+  char hud[128];
+  if (r.valid) {
+    std::snprintf(hud, sizeof(hud), "angle=%+6.1f deg  class=%-8s  conf=%.2f",
+                  r.angle_deg, r.class_name, r.confidence);
+  } else {
+    std::snprintf(hud, sizeof(hud), "no inference");
+  }
+  cv::Scalar hud_color = !r.valid ? cv::Scalar(200,200,200) :
+      (std::string(r.class_name) == "extensor") ? cv::Scalar(0, 200, 255) :
+      (std::string(r.class_name) == "flexor")   ? cv::Scalar(255, 100, 0) :
+                                                  cv::Scalar(200, 200, 200);
+  cv::rectangle(bgr, cv::Rect(0, 0, bgr.cols, 30), cv::Scalar(0, 0, 0), cv::FILLED);
+  cv::putText(bgr, hud, cv::Point(10, 22), cv::FONT_HERSHEY_SIMPLEX, 0.6,
+              hud_color, 1, cv::LINE_AA);
+
+  cv::imshow(window_name, bgr);
+  cv::waitKey(1);
 }
 
 std::string WristEstimator::ToJson(const WristResult& r) const {

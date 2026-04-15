@@ -98,6 +98,8 @@ The result is broadcast as **NDJSON** (one JSON object per line, `\n`-terminated
 ncat 127.0.0.1 5555
 ```
 
+A live OpenCV preview window opens during acquisition showing the camera frame with the hand skeleton, the wrist→middle-MCP angle vector (cyan), the configured forearm reference axis (yellow), and a HUD with `angle` / `class` / `confidence`. Set `WRIST_SHOW_PREVIEW = false` in `ConsoleDemo.cpp` to disable.
+
 Sample line:
 
 ```json

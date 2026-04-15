@@ -9,6 +9,11 @@ struct WristResult {
   float confidence;
   uint64_t frame;
   uint64_t timestamp;
+  // 21 hand landmarks in source-image pixel coordinates: [x0,y0, x1,y1, ...].
+  float landmarks_xy[42];
+  int src_width;
+  int src_height;
+  float forearm_axis_deg;  // copied from the estimator for overlay drawing
 };
 
 class WristEstimator {
@@ -32,3 +37,9 @@ private:
   struct Impl;
   Impl* p_;
 };
+
+// Renders the source frame with skeleton + angle overlay and calls cv::imshow.
+// Pumps the GUI event loop with a short waitKey. Safe to call every frame.
+void ShowWristPreview(const uint8_t* image, int width, int height, int channels,
+                      const WristResult& r,
+                      const char* window_name = "Wrist Preview");

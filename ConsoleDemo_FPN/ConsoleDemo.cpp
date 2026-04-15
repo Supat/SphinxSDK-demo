@@ -33,6 +33,7 @@ static const char* WRIST_MODEL_PATH        = "hand_landmark_full.onnx";
 static const float WRIST_FOREARM_AXIS_DEG  = 0.0f;   // direction of forearm in image (deg, +X = 0)
 static const float WRIST_NEUTRAL_THRESH_DEG = 5.0f;  // |angle| <= this -> "neutral"
 static const bool  WRIST_FLIP_SIGN         = false;
+static const bool  WRIST_SHOW_PREVIEW      = true;   // OpenCV imshow window with overlay
 static const uint16_t TCP_PORT             = 5555;
 
 typedef struct
@@ -701,8 +702,8 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
        }
     }
 
-    // wrist estimation + TCP broadcast
-    if (wrist) {
+    // wrist estimation + TCP broadcast + preview
+    {
       const BYTE* infer_buf = image;
       int infer_channels = 1;
       if (is_bayer && rgb_live) {
@@ -710,15 +711,26 @@ DWORD WINAPI ThreadProc(LPVOID lpv)
         infer_buf = rgb_live;
         infer_channels = 3;
       }
-      try {
-        WristResult wr = wrist->Estimate(infer_buf, width, height, infer_channels,
-                                         (uint64_t)img_header.FrameCounter,
-                                         (uint64_t)img_header.TimeStamp);
-        std::string js = wrist->ToJson(wr);
-        if (tcp) tcp->Broadcast(js);
-        printf("[WRIST] - %s\n", js.c_str());
-      } catch (const std::exception& e) {
-        printf("[ERROR] - Wrist inference failed: %s\n", e.what());
+      WristResult wr{};
+      wr.frame = (uint64_t)img_header.FrameCounter;
+      wr.timestamp = (uint64_t)img_header.TimeStamp;
+      wr.class_name = "neutral";
+      wr.src_width = width;
+      wr.src_height = height;
+      if (wrist) {
+        try {
+          wr = wrist->Estimate(infer_buf, width, height, infer_channels,
+                               (uint64_t)img_header.FrameCounter,
+                               (uint64_t)img_header.TimeStamp);
+          std::string js = wrist->ToJson(wr);
+          if (tcp) tcp->Broadcast(js);
+          printf("[WRIST] - %s\n", js.c_str());
+        } catch (const std::exception& e) {
+          printf("[ERROR] - Wrist inference failed: %s\n", e.what());
+        }
+      }
+      if (WRIST_SHOW_PREVIEW) {
+        ShowWristPreview(infer_buf, width, height, infer_channels, wr);
       }
     }
 
