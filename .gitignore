@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# Visual Studio user files (keep build artifacts; they were already committed)
+*.user
+*.suo
