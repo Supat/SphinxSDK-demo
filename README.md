@@ -5,15 +5,15 @@ A Windows C++ console demo for the **MRC Systems Sphinx SDK** (`SphinxLib`). It 
 ## Requirements
 
 - Windows (x64)
-- Visual Studio 2022 with the **v143** C++ build tools (MSVC 19.3+, C++17)
-- The Sphinx SDK from MRC Systems (not included in this repo) — request it from the camera vendor
-- [vcpkg](https://github.com/microsoft/vcpkg) for the OpenCV / ONNX Runtime dependencies
-- A hand-landmark ONNX model (e.g. MediaPipe Hands `hand_landmark_full.onnx`, 224×224 RGB input, 21 landmarks output)
+- Visual Studio 2022 with the *Desktop development with C++* workload (v143 toolset, MSVC 19.3+, C++17, Windows 10/11 SDK)
+- The Sphinx SDK from MRC Systems — vendor-only, request it from the camera vendor
 - A GigE Vision camera reachable on a network adapter on the host (the FPN code path activates only for `DeviceModelName == "GVRD-MRC HighSpeed"`)
+
+The OpenCV / ONNX Runtime / hand+pose ONNX dependencies are handled by the install scripts described below.
 
 ## Quick start (Windows)
 
-From an elevated PowerShell or Developer Command Prompt:
+From PowerShell or a Developer Command Prompt, after the Sphinx SDK is in place (see *Manual dependency install* → *1. Sphinx SDK*):
 
 ```bat
 git clone git@github.com:Supat/SphinxSDK-demo.git
@@ -22,11 +22,43 @@ scripts\setup.bat
 scripts\build.bat
 ```
 
-`setup.bat` clones+bootstraps vcpkg (default `C:\vcpkg`, override with `-VcpkgRoot`), installs `opencv4` + `onnxruntime` for `x64-windows`, integrates with MSBuild, and verifies the Sphinx SDK is at `..\SphinxLib\` (it cannot auto-install it — see below). `build.bat` invokes MSBuild for `Release|x64` and copies the bundled ONNX models next to the resulting `ConsoleDemo.exe`.
+The result is `ConsoleDemo_FPN\x64\Release\ConsoleDemo.exe` with both ONNX models copied next to it, ready to run.
 
-## Install dependencies
+---
 
-The project links against `SphinxLib.lib`, which ships with the Sphinx SDK. The `.vcxproj` expects it as a **sibling directory** to this repo:
+## Dependency installation
+
+There are two paths: **automated** (recommended) or **manual** (if you want to control each piece).
+
+### Automated: `scripts\setup.bat`
+
+A thin wrapper around `scripts\setup.ps1`. Idempotent — safe to re-run.
+
+```bat
+scripts\setup.bat
+```
+
+Optional flags (forwarded to the `.ps1`):
+
+| Flag                           | Effect                                                                 |
+|--------------------------------|------------------------------------------------------------------------|
+| `-VcpkgRoot D:\vcpkg`          | Install vcpkg to a custom location (default `C:\vcpkg`, or `$env:VCPKG_ROOT`). |
+| `-SkipVcpkg`                   | Don't touch vcpkg (use if you already have OpenCV / ONNX Runtime wired up). |
+
+What it does, in order:
+
+1. **Verifies prerequisites** — `git` on `PATH`, and Visual Studio 2022 with the C++ workload (located via `vswhere.exe`). Fails with a clear message if either is missing; it does not install Visual Studio for you.
+2. **Checks for the Sphinx SDK** at `..\SphinxLib\` and warns if missing. The Sphinx SDK is vendor-only (MRC Systems) and cannot be auto-installed — see *Manual* step 1 below for the layout.
+3. **Sets up vcpkg**: clones `microsoft/vcpkg` into `$VcpkgRoot` (or `git pull`s it if already present), runs `bootstrap-vcpkg.bat`, runs `vcpkg integrate install` so MSBuild picks up the manifest in `ConsoleDemo_FPN/vcpkg.json`, and pre-installs `opencv4:x64-windows` + `onnxruntime:x64-windows`.
+4. **Persists `VCPKG_ROOT`** as a User environment variable.
+
+> First-run vcpkg install builds OpenCV from source and can take 20–40 min and a few GB of disk. Subsequent runs are seconds.
+
+### Manual
+
+If you'd rather wire each dependency yourself, do these four things:
+
+**1. Sphinx SDK** (vendor-only, no automation possible). The `.vcxproj` expects it as a **sibling directory** to this repo:
 
 ```
 <parent>\
@@ -38,59 +70,71 @@ The project links against `SphinxLib.lib`, which ships with the Sphinx SDK. The 
     └── Release64\SphinxLib.lib
 ```
 
-Steps:
+Make sure `SphinxLib.dll` is on `PATH` or sits next to the built `.exe`. `Ws2_32.lib` and `IPHlpApi.Lib` come from the Windows SDK — no setup required.
 
-1. Install the Sphinx SDK from MRC Systems.
-2. Copy or symlink its `SphinxLib` folder next to this repo so the layout above matches.
-3. Make sure the SDK runtime DLL (`SphinxLib.dll`) is on `PATH` or sits next to the built `.exe`.
+**2. Visual Studio 2022** with the *Desktop development with C++* workload (provides the v143 toolset, MSVC 19.3+, and the Windows 10/11 SDK). C++17 is required.
 
-System libraries `Ws2_32.lib` and `IPHlpApi.Lib` are linked from the Windows SDK and need no extra setup.
-
-### OpenCV + ONNX Runtime via vcpkg
+**3. vcpkg + C++ libraries** (OpenCV for image conversion / overlay drawing, ONNX Runtime for inference):
 
 ```bat
 git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat
 C:\vcpkg\vcpkg integrate install
+C:\vcpkg\vcpkg install opencv4:x64-windows onnxruntime:x64-windows
+setx VCPKG_ROOT C:\vcpkg
 ```
 
-Dependencies are declared in `ConsoleDemo_FPN/vcpkg.json` (manifest mode). MSBuild auto-restores `opencv4` and `onnxruntime` for `x64-windows` on first build.
+Dependencies are declared in `ConsoleDemo_FPN/vcpkg.json` (manifest mode). After `vcpkg integrate install`, MSBuild auto-restores them on first build, so the explicit `vcpkg install` line above is just a pre-warm.
 
-### Hand + pose models
+**4. ONNX models** — already checked in:
 
-Two pre-converted ONNX models are checked into `ConsoleDemo_FPN/`:
+- `ConsoleDemo_FPN/hand_landmark_full.onnx` (~11 MB) — MediaPipe Hands, 21 hand landmarks.
+- `ConsoleDemo_FPN/pose_landmark_full.onnx` (~13 MB) — MediaPipe Pose, 33 body landmarks (used for forearm tracking).
 
-- **`hand_landmark_full.onnx`** (~11 MB) — MediaPipe Hands; 21 hand landmarks. Drives the wrist-vector calculation.
-- **`pose_landmark_full.onnx`** (~13 MB) — MediaPipe Pose; 33 body landmarks. Used to detect the **forearm direction** (elbow → wrist) so the wrist angle is measured against the actual forearm rather than a fixed reference.
+`scripts\build.bat` copies both next to the produced `.exe`. If you build manually, copy them yourself or change `WRIST_MODEL_PATH` / `POSE_MODEL_PATH` at the top of `ConsoleDemo.cpp` to absolute paths.
 
-Copy both next to the built `ConsoleDemo.exe`, or change `WRIST_MODEL_PATH` / `POSE_MODEL_PATH` at the top of `ConsoleDemo.cpp` to absolute paths.
-
-The pose estimator picks whichever side (left or right) has higher elbow+wrist visibility above `POSE_MIN_VISIBILITY` (default 0.5). If neither side is visible enough, the wrist estimator falls back to the static `WRIST_FOREARM_AXIS_DEG`. Each frame's JSON includes a `forearm` block reporting which axis was used.
-
-To regenerate the models (e.g. with a different MediaPipe revision):
+To regenerate the models from the official MediaPipe TFLite weights:
 
 ```bat
 pip install tf2onnx tensorflow onnx tflite2onnx
 python ConsoleDemo_FPN\scripts\prepare_models.py
 ```
 
-## Build
+The pose estimator picks whichever side (left or right) has higher elbow+wrist visibility above `POSE_MIN_VISIBILITY` (default 0.5). If neither side is visible enough, the wrist estimator falls back to the static `WRIST_FOREARM_AXIS_DEG`. Each frame's JSON includes a `forearm` block reporting which axis was used.
 
-**From Visual Studio:**
+---
 
-1. Open `ConsoleDemo_FPN/ConsoleDemo.sln`.
-2. Select configuration `Release | x64` (or `Debug | x64`).
-3. Build the solution (`Ctrl+Shift+B`).
+## Compilation
 
-**From a Developer Command Prompt:**
+There are three options.
+
+### A. `scripts\build.bat` (recommended)
 
 ```bat
-msbuild ConsoleDemo_FPN\ConsoleDemo.sln /p:Configuration=Release /p:Platform=x64
+scripts\build.bat            :: Release|x64 (default)
+scripts\build.bat Debug      :: Debug|x64
 ```
 
-The output binary lands in `ConsoleDemo_FPN\Release\ConsoleDemo.exe` (or `Debug\` for Debug builds).
+It locates MSBuild via `vswhere`, builds the solution with `/m` (parallel), and copies both ONNX models into the output directory so the resulting `ConsoleDemo.exe` runs immediately.
 
-> Build only x64 — the Win32 configurations exist in the project file but the Sphinx library paths are wired up only for x64.
+Output: `ConsoleDemo_FPN\x64\<Config>\ConsoleDemo.exe`
+
+### B. Visual Studio GUI
+
+1. Open `ConsoleDemo_FPN\ConsoleDemo.sln`.
+2. Select `Release | x64` (or `Debug | x64`).
+3. Build (`Ctrl+Shift+B`).
+4. Manually copy `ConsoleDemo_FPN\hand_landmark_full.onnx` and `pose_landmark_full.onnx` next to the built exe.
+
+### C. MSBuild from a Developer Command Prompt
+
+```bat
+msbuild ConsoleDemo_FPN\ConsoleDemo.sln /p:Configuration=Release /p:Platform=x64 /m
+copy ConsoleDemo_FPN\hand_landmark_full.onnx ConsoleDemo_FPN\x64\Release\
+copy ConsoleDemo_FPN\pose_landmark_full.onnx ConsoleDemo_FPN\x64\Release\
+```
+
+> Build x64 only — the Win32 configurations exist in the project file but the Sphinx library paths are wired up only for x64.
 
 ## Run
 
