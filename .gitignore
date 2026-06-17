@@ -1,0 +1,40 @@
+# Visual Studio build output
+[Bb]in/
+[Dd]ebug/
+[Rr]elease/
+x64/
+Win32/
+[Oo]bj/
+
+# Visual Studio per-user / workspace files
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# Precompiled headers and IntelliSense
+ipch/
+*.ipch
+*.pch
+*.aps
+
+# Compiler / linker intermediates
+*.obj
+*.pdb
+*.ipdb
+*.iobj
+*.idb
+*.tlog
+*.log
+*.lastbuildstate
+
+# Build output / generated files
+*.exe
+*.dll
+*.lib
+image.bmp
+
+# Vendor SDK is intentionally tracked (see CLAUDE.md / README)
+!SphinxLib/
+!SphinxLib/**
