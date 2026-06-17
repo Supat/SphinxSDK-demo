@@ -38,6 +38,13 @@ ipch/
 *.dll
 *.lib
 image.bmp
+capture.png
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
 
 # Vendor SDK is intentionally tracked (see CLAUDE.md / README)
 !SphinxLib/
