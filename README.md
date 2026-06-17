@@ -1,6 +1,13 @@
-# SphinxSDK Demo — ConsoleDemo_FPN
+# SphinxSDK Demo
 
-A Windows C++ console demo for the **MRC Systems Sphinx SDK** (`SphinxLib`). It discovers a GigE Vision camera, streams images over a ring buffer, optionally applies Fixed Pattern Noise (FPN) dark-frame subtraction, and saves the last frame as `image.bmp`.
+Windows demos for the **MRC Systems Sphinx SDK** (`SphinxLib`). Both discover a GigE Vision camera, stream images over a ring buffer, optionally apply Fixed Pattern Noise (FPN) dark-frame subtraction, and save frames.
+
+- **`ConsoleDemo_FPN/`** — the original console app (VS2015 / `v140`). Documented below.
+- **`QtDemo/`** — a Qt Widgets GUI front-end built on a reusable `Camera` class that wraps the SDK; live view, device selection, start/stop, and save. See [`QtDemo/README.md`](QtDemo/README.md).
+
+## ConsoleDemo_FPN
+
+A Windows C++ console demo. It discovers a GigE Vision camera, streams images over a ring buffer, optionally applies FPN dark-frame subtraction, and saves the last frame as `image.bmp`.
 
 ## Requirements
 
@@ -66,9 +73,26 @@ The output binary lands in `ConsoleDemo_FPN\Release\ConsoleDemo.exe` (or `Debug\
 
 For `GVRD-MRC HighSpeed` cameras, the first ~10 frames are used to capture a dark reference (with `ExposureTime` temporarily set to 0); subsequent frames are dark-noise corrected automatically.
 
+## QtDemo (GUI front-end)
+
+A Qt Widgets app that reuses `darknoise.cpp` / `bayer.cpp` and wraps the `GEV*`
+API in a reusable `Camera` class (discovery, connect, threaded grab loop,
+internal FPN). It provides device selection, a live image view, start/stop, and
+save. Build with CMake against a Qt 5 `msvc` build (Qt 6 needs MSVC 2019+):
+
+```bat
+cd QtDemo
+cmake -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH=C:/Qt/5.15.2/msvc2019_64
+cmake --build build --config Release
+```
+
+Post-build copies `SphinxLib.dll`, the SDK `Extras64` runtime, and the Qt DLLs
+next to the executable. Full details in [`QtDemo/README.md`](QtDemo/README.md).
+
 ## Repository layout
 
 - `ConsoleDemo_FPN/ConsoleDemo.cpp` — discovery, init, acquisition thread, BMP writer
-- `ConsoleDemo_FPN/darknoise.{h,cpp}` — SSE2 dark-frame subtraction
+- `ConsoleDemo_FPN/darknoise.{h,cpp}` — dark-frame subtraction (OpenMP `darknoise_bw_subtract` + an SSE2 variant)
 - `ConsoleDemo_FPN/bayer.{h,cpp}` — bilinear demosaic for Bayer pixel formats
 - `ConsoleDemo_FPN/SphinxLib.h` — vendored copy of the SDK header (reference only)
+- `QtDemo/` — Qt GUI front-end (`Camera` class + `MainWindow`)

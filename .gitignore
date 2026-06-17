@@ -6,6 +6,10 @@ x64/
 Win32/
 [Oo]bj/
 
+# CMake build directories
+build/
+[Bb]uild/
+
 # Visual Studio per-user / workspace files
 .vs/
 *.user
