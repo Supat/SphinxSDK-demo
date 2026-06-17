@@ -18,10 +18,17 @@ frames.
 
 ## Wrist-angle estimation
 
-Run `python app.py`, or **double-click `run_app.bat`** from File Explorer
-(double-clicking `app.py` itself is unreliable — it may open in an editor, and
-a console-mode error window closes before you can read it; the `.bat` pins the
-working directory, picks the right Python, and pauses on error). Connect → Start
+Run `python app.py`, or double-click one of the launchers from File Explorer
+(double-clicking `app.py` itself is unreliable — it may open in an editor, and a
+console-mode error window closes before you can read it):
+
+- **`run_app.bat`** — keeps a console open (shows logs, pauses on error). Use
+  this first / when troubleshooting.
+- **`run_app_quiet.bat`** — runs under `pythonw.exe` with no console window.
+  Use once you've confirmed it works; if the window doesn't appear, fall back to
+  `run_app.bat` to see the error.
+
+Both pin the working directory and pick the right Python. Connect → Start
 streams frames; with the **Wrist angle (MediaPipe)** box checked, each frame runs
 Pose + Hands and the detected wrist flexion is drawn on the view and shown in the
 readout.
