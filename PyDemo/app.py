@@ -353,9 +353,14 @@ class MainWindow(QMainWindow):
         # Controls tab: a curated subset.
         while self.control_form.rowCount():
             self.control_form.removeRow(0)
+        # Names that may exist across cameras; only available ones are shown.
         targets = [
+            ("AcquisitionMode", "Acquisition Mode"),
+            ("AutoControl", "Auto Control"),
             ("ExposureAuto", "Exposure Auto"), ("ExposureTime", "Exposure"),
-            ("GainAuto", "Gain Auto"), ("Gain", "Gain"),
+            ("GainAuto", "Gain Auto"),
+            ("Gain", "Gain"), ("GlobalGain", "Gain"),
+            ("GainRed", "Gain Red"), ("GainGreen", "Gain Green"), ("GainBlue", "Gain Blue"),
             ("AcquisitionFrameRate", "Frame Rate"),
             ("BalanceWhiteAuto", "White Balance"),
         ]

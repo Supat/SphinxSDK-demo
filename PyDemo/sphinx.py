@@ -540,7 +540,10 @@ class Camera:
         if _GEVGetFeatureParameter(self.cam, name.encode("latin-1"), byref(fp)) != 0:
             return fi
         fi.type = _TYPE_NAMES.get(fp.Type, "unknown")
-        fi.available = bool(fp.IsAvailable)
+        # Show any implemented feature: some cameras report IsAvailable=0 for
+        # implemented, writable nodes (e.g. ExposureTime), which would otherwise
+        # hide them from the browser/controls.
+        fi.available = bool(fp.IsImplemented) or bool(fp.IsAvailable)
         fi.readable = fp.AccessMode in (ACCESS_MODE_RO, ACCESS_MODE_RW)
         fi.writable = fp.AccessMode in (ACCESS_MODE_WO, ACCESS_MODE_RW) and not fp.IsLocked
         fi.int_min, fi.int_max = fp.Min, fp.Max
@@ -567,12 +570,14 @@ class Camera:
         if _GEVGetFeatureList(self.cam, byref(head), byref(level)) != 0:
             return []
         out, node = [], head
-        skip = {TYPE_CATEGORY, TYPE_FEATURE, TYPE_REGISTER, TYPE_PORT}
+        # The list node's Type is STRUCTURAL: 0 = category, 1 = feature (leaf).
+        # The real value type (integer/float/enum/...) comes from describe().
+        editable = {"integer", "float", "string", "enum", "bool", "command"}
         while node:
             n = node.contents
-            if n.Name and n.Level <= max_level and n.Type not in skip:
+            if n.Name and n.Level <= max_level and n.Type != TYPE_CATEGORY:
                 fi = self.describe(n.Name.decode("latin-1"))
-                if fi.available:
+                if fi.available and fi.type in editable:
                     out.append(fi)
             node = n.Next
         return out
