@@ -13,7 +13,9 @@ frames.
 | `capture_test.py` | Smoke test: discover → connect → grab N frames → save `capture.png`. |
 | `wrist.py` | `WristEstimator` — MediaPipe **Tasks** Pose + Hands; computes wrist flexion (forearm vs hand axis) and draws an overlay. Auto-downloads the `.task` models to `models/` on first use. |
 | `analyze_image.py` | Offline check: run the estimator on an image (`python analyze_image.py [path]`) or a live grab (`python analyze_image.py --grab [N]`); saves an annotated PNG. |
-| `app.py` | PySide6 live app: stream + MediaPipe overlay + wrist-angle readout, device select/connect/start-stop, exposure/gain controls, and a generic feature grid. |
+| `app.py` | PySide6 live app: stream + MediaPipe overlay + wrist-angle readout, device select/connect/start-stop, exposure/gain controls, a generic feature grid, and a TCP broadcast toggle. |
+| `broadcaster.py` | `AngleBroadcaster` — a small TCP server that streams wrist readings as newline-delimited JSON to any connected clients. |
+| `tcp_client.py` | Example consumer: connects and prints each reading. |
 | `requirements.txt` | `numpy`, `opencv-python`, `mediapipe`, `PySide6`. |
 
 ## Wrist-angle estimation
@@ -47,6 +49,28 @@ or multiple views. Inference runs on a worker thread at a downscaled width
 
 MediaPipe here is the **Tasks** API (this build has no legacy `solutions`); the
 pose/hand `.task` bundles download once into `PyDemo/models/`.
+
+## TCP broadcast
+
+Tick **Broadcast TCP** (and a port, default 5555) to start an embedded TCP
+server. While streaming with MediaPipe on, every frame with a detected wrist is
+pushed to all connected clients as one line of JSON:
+
+```json
+{"frame": 42, "t": 1718638655.12, "wrists": [{"side": "left", "angle_deg": 168.4}]}
+```
+
+The toolbar shows the live client count. Consume it from anything that speaks
+TCP — e.g. the included example:
+
+```bat
+python tcp_client.py 127.0.0.1 5555
+```
+
+Notes: it's a one-to-many TCP **server** (clients connect to the app), not UDP
+broadcast. Slow/dead clients are dropped (2 s send timeout) so they never stall
+acquisition. Bind is `0.0.0.0`, so remote machines on the network can connect;
+restrict via firewall if needed.
 
 ## Setup
 
