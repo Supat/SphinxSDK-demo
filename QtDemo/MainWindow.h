@@ -15,6 +15,8 @@ class QComboBox;
 class QPushButton;
 class QLabel;
 class QPlainTextEdit;
+class ControlPanel;
+class FeaturePanel;
 
 class MainWindow : public QMainWindow
 {
@@ -51,6 +53,8 @@ private:
     QPushButton *m_saveBtn = nullptr;
     QLabel *m_view = nullptr;
     QPlainTextEdit *m_log = nullptr;
+    ControlPanel *m_controlPanel = nullptr;
+    FeaturePanel *m_featurePanel = nullptr;
 };
 
 #endif // MAINWINDOW_H

@@ -19,9 +19,35 @@
 #include <QVector>
 #include <QByteArray>
 
+#include <QStringList>
+
 #include <atomic>
 #include <thread>
 #include <vector>
+
+// GenICam feature kinds (mirrors SphinxLib's TYPE_* constants).
+enum class FeatureType {
+    Category, Feature, Integer, Float, String,
+    Enumeration, Command, Boolean, Register, Port, Unknown
+};
+
+// Metadata + range for one camera feature, as read from the GenICam node map.
+struct FeatureInfo
+{
+    QString name;          // GenICam node name (used for get/set)
+    QString displayName;   // human label
+    QString tooltip;
+    QString unit;
+    FeatureType type = FeatureType::Unknown;
+    int level = 0;         // visibility (0=Beginner .. higher=Expert/Guru)
+    bool readable = false;
+    bool writable = false;
+    bool available = false;
+
+    qint64 intMin = 0, intMax = 0, intInc = 1;   // Integer
+    double floatMin = 0.0, floatMax = 0.0;        // Float
+    QStringList enumEntries;                       // Enumeration
+};
 
 // A discovered GigE Vision device. Carries both display strings and the raw
 // connection fields needed to build a SphinxLib CONNECTION.
@@ -65,6 +91,24 @@ public:
 
     bool isOpen() const { return m_open; }
     bool isStreaming() const { return m_streaming; }
+
+    // ---- GenICam feature access (valid once open) ----
+    // Enumerate the camera's node map (features at visibility <= maxLevel).
+    QVector<FeatureInfo> featureList(int maxLevel = 99);
+    // Metadata + current range for a single feature.
+    FeatureInfo describeFeature(const QString &name);
+
+    bool readInteger(const QString &name, qint64 *out);
+    bool writeInteger(const QString &name, qint64 value);
+    bool readFloat(const QString &name, double *out);
+    bool writeFloat(const QString &name, double value);
+    bool readString(const QString &name, QString *out);
+    bool writeString(const QString &name, const QString &value);
+    bool readBoolean(const QString &name, bool *out);
+    bool writeBoolean(const QString &name, bool value);
+    bool readEnumeration(const QString &name, QString *out);
+    bool writeEnumeration(const QString &name, const QString &entry);
+    bool executeCommand(const QString &name);
 
     // Forwarder so the SDK's C callbacks (which live outside the class and
     // therefore cannot touch the protected signals) can surface log lines.

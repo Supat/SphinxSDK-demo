@@ -1,7 +1,11 @@
 // MainWindow.cpp
 #include "MainWindow.h"
+#include "ControlPanel.h"
+#include "FeaturePanel.h"
 
 #include <QComboBox>
+#include <QDockWidget>
+#include <QTabWidget>
 #include <QPushButton>
 #include <QLabel>
 #include <QPlainTextEdit>
@@ -72,6 +76,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(m_log);
     setCentralWidget(central);
 
+    // --- settings sidebar: targeted controls + full feature grid ---
+    m_controlPanel = new ControlPanel(&m_camera);
+    m_featurePanel = new FeaturePanel(&m_camera);
+    auto *tabs = new QTabWidget;
+    tabs->addTab(m_controlPanel, "Controls");
+    tabs->addTab(m_featurePanel, "All Features");
+    auto *dock = new QDockWidget("Camera Settings", this);
+    dock->setWidget(tabs);
+    dock->setMinimumWidth(340);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+
     statusBar()->showMessage("Ready");
 
     // --- wiring ---
@@ -123,6 +138,11 @@ void MainWindow::onConnect()
     QString err;
     if (!m_camera.open(m_devices[idx], &err))
         QMessageBox::warning(this, "Connect failed", err);
+    else
+    {
+        m_controlPanel->refresh();
+        m_featurePanel->refresh();
+    }
     updateButtons();
 }
 

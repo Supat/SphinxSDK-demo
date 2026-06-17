@@ -329,6 +329,198 @@ QImage Camera::toQImage(const unsigned char *buf) const
                   (int)m_width, QImage::Format_Grayscale8);
 }
 
+// ---- GenICam feature access ------------------------------------------------
+// SphinxLib takes mutable char* names; this keeps a writable copy alive.
+namespace {
+FeatureType mapType(BYTE t)
+{
+    switch (t)
+    {
+    case TYPE_CATEGORY:    return FeatureType::Category;
+    case TYPE_FEATURE:     return FeatureType::Feature;
+    case TYPE_INTEGER:     return FeatureType::Integer;
+    case TYPE_FLOAT:       return FeatureType::Float;
+    case TYPE_STRING:      return FeatureType::String;
+    case TYPE_ENUMERATION: return FeatureType::Enumeration;
+    case TYPE_COMMAND:     return FeatureType::Command;
+    case TYPE_BOOLEAN:     return FeatureType::Boolean;
+    case TYPE_REGISTER:    return FeatureType::Register;
+    case TYPE_PORT:        return FeatureType::Port;
+    default:               return FeatureType::Unknown;
+    }
+}
+} // namespace
+
+FeatureInfo Camera::describeFeature(const QString &name)
+{
+    FeatureInfo fi;
+    fi.name = name;
+    fi.displayName = name;
+    if (!m_open)
+        return fi;
+
+    QByteArray nm = name.toLatin1();
+
+    FEATURE_PARAMETER fp;
+    std::memset(&fp, 0, sizeof(fp));
+    if (GEVGetFeatureParameter(m_cam, nm.data(), &fp) != 0)
+        return fi;
+
+    fi.type      = mapType(fp.Type);
+    fi.available = fp.IsAvailable != 0;
+    fi.readable  = (fp.AccessMode == ACCESS_MODE_RO || fp.AccessMode == ACCESS_MODE_RW);
+    fi.writable  = (fp.AccessMode == ACCESS_MODE_WO || fp.AccessMode == ACCESS_MODE_RW)
+                   && fp.IsLocked == 0;
+    fi.intMin = fp.Min;
+    fi.intMax = fp.Max;
+    fi.intInc = fp.Inc ? (qint64)fp.Inc : 1;
+    fi.floatMin = fp.FloatMin;
+    fi.floatMax = fp.FloatMax;
+
+    char buf[256] = {0};
+    if (GEVGetFeatureDisplayName(m_cam, nm.data(), buf, sizeof(buf)) == 0 && buf[0])
+        fi.displayName = QString::fromLatin1(buf);
+    buf[0] = 0;
+    if (GEVGetFeatureTooltip(m_cam, nm.data(), buf, sizeof(buf)) == 0)
+        fi.tooltip = QString::fromLatin1(buf);
+    buf[0] = 0;
+    if (GEVGetFeatureUnit(m_cam, nm.data(), buf, sizeof(buf)) == 0)
+        fi.unit = QString::fromLatin1(buf);
+
+    if (fi.type == FeatureType::Enumeration)
+    {
+        for (int i = 0; i < (int)fp.EnumerationCount; ++i)
+        {
+            char ename[128] = {0};
+            if (GEVGetFeatureEnumerationName(m_cam, nm.data(), (BYTE)i, ename, sizeof(ename)) == 0
+                && ename[0])
+                fi.enumEntries << QString::fromLatin1(ename);
+        }
+    }
+    return fi;
+}
+
+QVector<FeatureInfo> Camera::featureList(int maxLevel)
+{
+    QVector<FeatureInfo> out;
+    if (!m_open)
+        return out;
+
+    FeatureListPtr head = nullptr;
+    BYTE level = 0;
+    if (GEVGetFeatureList(m_cam, &head, &level) != 0)
+        return out;
+
+    for (FeatureListPtr n = head; n != nullptr; n = n->Next)
+    {
+        if (!n->Name || n->Level > maxLevel)
+            continue;
+        FeatureType t = mapType(n->Type);
+        if (t == FeatureType::Category || t == FeatureType::Feature
+            || t == FeatureType::Port || t == FeatureType::Register)
+            continue;   // skip structural / opaque nodes
+        FeatureInfo fi = describeFeature(QString::fromLatin1(n->Name));
+        fi.level = n->Level;
+        if (fi.available)
+            out.push_back(fi);
+    }
+    return out;
+}
+
+bool Camera::readInteger(const QString &name, qint64 *out)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    INT64 v = 0;
+    if (GEVGetFeatureInteger(m_cam, nm.data(), &v) != 0) return false;
+    if (out) *out = (qint64)v;
+    return true;
+}
+
+bool Camera::writeInteger(const QString &name, qint64 value)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    return GEVSetFeatureInteger(m_cam, nm.data(), (INT64)value) == 0;
+}
+
+bool Camera::readFloat(const QString &name, double *out)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    double v = 0.0;
+    if (GEVGetFeatureFloat(m_cam, nm.data(), &v) != 0) return false;
+    if (out) *out = v;
+    return true;
+}
+
+bool Camera::writeFloat(const QString &name, double value)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    return GEVSetFeatureFloat(m_cam, nm.data(), value) == 0;
+}
+
+bool Camera::readString(const QString &name, QString *out)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    char buf[512] = {0};
+    if (GEVGetFeatureString(m_cam, nm.data(), buf) != 0) return false;
+    if (out) *out = QString::fromLatin1(buf);
+    return true;
+}
+
+bool Camera::writeString(const QString &name, const QString &value)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    QByteArray val = value.toLatin1();
+    return GEVSetFeatureString(m_cam, nm.data(), val.data()) == 0;
+}
+
+bool Camera::readBoolean(const QString &name, bool *out)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    DWORD v = 0;
+    if (GEVGetFeatureBoolean(m_cam, nm.data(), &v) != 0) return false;
+    if (out) *out = v != 0;
+    return true;
+}
+
+bool Camera::writeBoolean(const QString &name, bool value)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    return GEVSetFeatureBoolean(m_cam, nm.data(), value ? 1 : 0) == 0;
+}
+
+bool Camera::readEnumeration(const QString &name, QString *out)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    char buf[128] = {0};
+    if (GEVGetFeatureEnumeration(m_cam, nm.data(), buf, sizeof(buf)) != 0) return false;
+    if (out) *out = QString::fromLatin1(buf);
+    return true;
+}
+
+bool Camera::writeEnumeration(const QString &name, const QString &entry)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    QByteArray e = entry.toLatin1();
+    return GEVSetFeatureEnumeration(m_cam, nm.data(), e.data(), e.size()) == 0;
+}
+
+bool Camera::executeCommand(const QString &name)
+{
+    if (!m_open) return false;
+    QByteArray nm = name.toLatin1();
+    return GEVSetFeatureCommand(m_cam, nm.data(), 1) == 0;
+}
+
 void Camera::grabLoop()
 {
     IMAGE_HEADER header;

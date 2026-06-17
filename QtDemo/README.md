@@ -9,10 +9,24 @@ save.
 
 | File | Role |
 |------|------|
-| `Camera.h` / `Camera.cpp` | SDK wrapper: `discover()`, `open()`, `start()`, `stop()`, `close()`. Runs the grab loop on a worker thread and emits `frameReady(QImage)`. FPN dark-frame subtraction is handled internally for `GVRD-MRC HighSpeed`. All SphinxLib/`windows.h` code is confined to `Camera.cpp`. |
-| `MainWindow.h` / `MainWindow.cpp` | UI and signal wiring. |
+| `Camera.h` / `Camera.cpp` | SDK wrapper: `discover()`, `open()`, `start()`, `stop()`, `close()`, and a generic GenICam feature API (`featureList()`, `describeFeature()`, typed `read*`/`write*`/`executeCommand`). Runs the grab loop on a worker thread and emits `frameReady(QImage)`. FPN dark-frame subtraction is handled internally for `GVRD-MRC HighSpeed`. All SphinxLib/`windows.h` code is confined to `Camera.cpp`. |
+| `MainWindow.h` / `MainWindow.cpp` | UI and signal wiring; hosts the settings dock. |
+| `FeatureEditor.h` / `.cpp` | Factory turning a `FeatureInfo` into a live editor widget (slider+spinbox / combo / checkbox / button / line edit) bound to the camera. |
+| `ControlPanel.h` / `.cpp` | "Controls" tab — curated common settings (exposure, gain, frame rate, auto modes, white balance), shown only if the camera exposes them. |
+| `FeaturePanel.h` / `.cpp` | "All Features" tab — generic GenICam property grid driven by `GEVGetFeatureList`, filtered by visibility (Beginner/Expert/Guru/All). |
 | `main.cpp` | `QApplication` entry point. |
 | `CMakeLists.txt` | Build; reuses `darknoise.cpp` / `bayer.cpp` from the console demo and links `SphinxLib.lib`. |
+
+## Camera settings UI
+
+The right-hand **Camera Settings** dock has two tabs, both populated on connect:
+
+- **Controls** — sliders/combos for the common knobs, each wired through the
+  typed feature accessors with live min/max from `GEVGetFeatureParameter`.
+- **All Features** — every available node from the camera's GenICam map, with an
+  inline editor and unit; pick a visibility level to widen/narrow the list.
+
+Feature edits go straight to the camera and re-read to reflect any clamping.
 
 ## Architecture
 
@@ -60,5 +74,6 @@ writes the current frame as PNG/BMP/JPG.
 
 - Display handles **8-bit mono** and the two 8-bit Bayer formats
   (`BAYGR8` / `BAYRG8`); 10/12/16-bit and other color formats are not yet mapped.
-- No exposure/gain controls in the UI yet — the FPN exposure juggling is internal.
+- Feature editors are read on connect; they don't auto-poll, so values changed
+  by the camera itself (e.g. an Auto mode) need a manual re-read.
 - Single camera (SDK id 1), matching the original demo.

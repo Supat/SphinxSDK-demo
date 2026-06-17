@@ -22,6 +22,9 @@ add_executable(SphinxQtDemo WIN32
     main.cpp
     Camera.cpp        Camera.h
     MainWindow.cpp    MainWindow.h
+    FeatureEditor.cpp FeatureEditor.h
+    ControlPanel.cpp  ControlPanel.h
+    FeaturePanel.cpp  FeaturePanel.h
     "${FPN_DIR}/darknoise.cpp"
     "${FPN_DIR}/bayer.cpp"
 )
