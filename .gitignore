@@ -46,6 +46,10 @@ __pycache__/
 .venv/
 venv/
 
+# Downloaded MediaPipe models and annotated outputs
+PyDemo/models/
+*_annotated.png
+
 # Vendor SDK is intentionally tracked (see CLAUDE.md / README)
 !SphinxLib/
 !SphinxLib/**
