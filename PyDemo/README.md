@@ -18,9 +18,13 @@ frames.
 
 ## Wrist-angle estimation
 
-`python app.py` opens the live UI. Connect → Start streams frames; with the
-**Wrist angle (MediaPipe)** box checked, each frame runs Pose + Hands and the
-detected wrist flexion is drawn on the view and shown in the readout.
+Run `python app.py`, or **double-click `run_app.bat`** from File Explorer
+(double-clicking `app.py` itself is unreliable — it may open in an editor, and
+a console-mode error window closes before you can read it; the `.bat` pins the
+working directory, picks the right Python, and pauses on error). Connect → Start
+streams frames; with the **Wrist angle (MediaPipe)** box checked, each frame runs
+Pose + Hands and the detected wrist flexion is drawn on the view and shown in the
+readout.
 
 "Wrist angle" is defined as the flexion/extension angle between the **forearm**
 (elbow→wrist, from Pose) and the **hand axis** (wrist→middle-finger MCP, from
