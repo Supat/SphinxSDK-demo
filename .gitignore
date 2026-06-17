@@ -50,6 +50,11 @@ venv/
 PyDemo/models/
 *_annotated.png
 
+# Calibration output (machine/lens-specific) and generated artifacts
+PyDemo/calib.json
+PyDemo/charuco_board.png
+undistort_test.png
+
 # Vendor SDK is intentionally tracked (see CLAUDE.md / README)
 !SphinxLib/
 !SphinxLib/**

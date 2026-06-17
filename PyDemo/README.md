@@ -16,6 +16,28 @@ frames.
 | `app.py` | PySide6 live app: stream + MediaPipe overlay + wrist-angle readout, device select/connect/start-stop, exposure/gain controls, a generic feature grid, and a TCP broadcast toggle. |
 | `broadcaster.py` | `AngleBroadcaster` — a small TCP server that streams wrist readings as newline-delimited JSON to any connected clients. |
 | `tcp_client.py` | Example consumer: connects and prints each reading. |
+| `charuco.py` / `make_charuco.py` | Shared ChArUco board definition + printable-board generator. |
+| `calibrate.py` | Live lens calibration: capture ChArUco views, calibrate, save `calib.json`. |
+| `undistort.py` | `Undistorter` — applies `calib.json` to frames (cached remap). |
+
+## Lens-distortion correction
+
+The camera streams **raw, uncorrected** pixels (no distortion-correction exists
+in the SDK or the camera's GenICam map — verified), so correct it with a
+one-time calibration:
+
+1. `python make_charuco.py` → `charuco_board.png`. Print it, mount it flat/rigid.
+2. `python calibrate.py` → live window. Hold the board across the field of view
+   at varied angles; **SPACE** captures a view (aim for 12–20), **c** calibrates
+   and saves `calib.json`, **q** quits. It calibrates with **both** the standard
+   (pinhole) and **fisheye** models and keeps whichever has the lower
+   reprojection error (printed as RMS).
+3. In `app.py`, the **Undistort** checkbox is enabled once `calib.json` exists;
+   correction is applied at full resolution before inference/display, so wrist
+   angles are measured on the corrected geometry.
+
+The square/marker sizes in `charuco.py` don't need to be metric-accurate — the
+intrinsics and distortion coefficients are scale-independent.
 | `requirements.txt` | `numpy`, `opencv-python`, `mediapipe`, `PySide6`. |
 
 ## Wrist-angle estimation

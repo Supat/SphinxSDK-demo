@@ -28,6 +28,7 @@ from PySide6.QtCore import QTimer
 import sphinx
 from wrist import WristEstimator
 from broadcaster import AngleBroadcaster
+from undistort import Undistorter
 
 INFER_WIDTH = 800   # downscale before MediaPipe / display for smooth CPU rate
 
@@ -46,15 +47,21 @@ class GrabWorker(QThread):
     info = Signal(str)
 
     def __init__(self, cam: sphinx.Camera, use_mediapipe: bool,
-                 broadcaster: AngleBroadcaster | None = None):
+                 broadcaster: AngleBroadcaster | None = None,
+                 undistorter=None, use_undistort: bool = False):
         super().__init__()
         self._cam = cam
         self._use_mp = use_mediapipe
         self._broadcaster = broadcaster
+        self._undistorter = undistorter
+        self._use_undistort = use_undistort
         self._running = False
 
     def set_mediapipe(self, on: bool):
         self._use_mp = on
+
+    def set_undistort(self, on: bool):
+        self._use_undistort = on
 
     def stop(self):
         self._running = False
@@ -78,6 +85,9 @@ class GrabWorker(QThread):
                     continue
                 frame_i += 1
                 rgb = img if img.ndim == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+                # lens-distortion correction (full resolution, before downscale)
+                if self._use_undistort and self._undistorter is not None:
+                    rgb = self._undistorter.apply(rgb)
                 # downscale for inference + display
                 if rgb.shape[1] > INFER_WIDTH:
                     scale = INFER_WIDTH / rgb.shape[1]
@@ -181,6 +191,8 @@ class MainWindow(QMainWindow):
         self.worker: GrabWorker | None = None
         self.devices: list[sphinx.DeviceInfo] = []
         self.broadcaster = AngleBroadcaster()
+        # Lens-distortion correction is available only if calibrate.py has run.
+        self.undistorter = Undistorter() if Undistorter.exists() else None
 
         # controls row
         self.device_combo = QComboBox()
@@ -190,6 +202,13 @@ class MainWindow(QMainWindow):
         self.stop_btn = QPushButton("Stop")
         self.mp_chk = QCheckBox("Wrist angle (MediaPipe)")
         self.mp_chk.setChecked(True)
+        self.undistort_chk = QCheckBox("Undistort")
+        if self.undistorter is None:
+            self.undistort_chk.setEnabled(False)
+            self.undistort_chk.setToolTip("Run calibrate.py to create calib.json first.")
+        else:
+            self.undistort_chk.setChecked(True)
+            self.undistort_chk.setToolTip(f"Lens model: {self.undistorter.model}")
         self.bcast_chk = QCheckBox("Broadcast TCP")
         self.port_spin = QSpinBox()
         self.port_spin.setRange(1024, 65535)
@@ -210,6 +229,7 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.stop_btn)
         controls.addSpacing(12)
         controls.addWidget(self.mp_chk)
+        controls.addWidget(self.undistort_chk)
         controls.addSpacing(12)
         controls.addWidget(self.bcast_chk)
         controls.addWidget(QLabel("port:"))
@@ -259,6 +279,7 @@ class MainWindow(QMainWindow):
         self.start_btn.clicked.connect(self.on_start)
         self.stop_btn.clicked.connect(self.on_stop)
         self.mp_chk.toggled.connect(self.on_mp_toggle)
+        self.undistort_chk.toggled.connect(self.on_undistort_toggle)
         self.bcast_chk.toggled.connect(self.on_broadcast_toggle)
 
         # refresh the connected-client count periodically
@@ -299,7 +320,8 @@ class MainWindow(QMainWindow):
     def on_start(self):
         if self.worker:
             return
-        self.worker = GrabWorker(self.cam, self.mp_chk.isChecked(), self.broadcaster)
+        self.worker = GrabWorker(self.cam, self.mp_chk.isChecked(), self.broadcaster,
+                                 self.undistorter, self.undistort_chk.isChecked())
         self.worker.frameReady.connect(self.on_frame)
         self.worker.angles.connect(self.angle_label.setText)
         self.worker.info.connect(self.log_msg)
@@ -319,6 +341,10 @@ class MainWindow(QMainWindow):
     def on_mp_toggle(self, on: bool):
         if self.worker:
             self.worker.set_mediapipe(on)
+
+    def on_undistort_toggle(self, on: bool):
+        if self.worker:
+            self.worker.set_undistort(on)
 
     def on_broadcast_toggle(self, on: bool):
         if on:
