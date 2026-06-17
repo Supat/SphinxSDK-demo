@@ -194,7 +194,11 @@ class MainWindow(QMainWindow):
         self.port_spin = QSpinBox()
         self.port_spin.setRange(1024, 65535)
         self.port_spin.setValue(5555)
-        self.bcast_status = QLabel("clients: 0")
+        self.bcast_status = QLabel("off")
+        # Fixed width + stable alignment so the toolbar doesn't reflow as the
+        # text changes between "off" / "clients: N".
+        self.bcast_status.setFixedWidth(80)
+        self.bcast_status.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
         controls = QHBoxLayout()
         controls.addWidget(QLabel("Device:"))
