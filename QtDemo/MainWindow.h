@@ -29,6 +29,7 @@ private slots:
     void onStart();
     void onStop();
     void onSave();
+    void onBayerChanged(int index);
     void onFrame(const QImage &image);
     void onLog(const QString &message);
     void onStreamingChanged(bool streaming);
@@ -42,6 +43,7 @@ private:
     qint64 m_frameCount = 0;
 
     QComboBox *m_deviceCombo = nullptr;
+    QComboBox *m_bayerCombo = nullptr;
     QPushButton *m_refreshBtn = nullptr;
     QPushButton *m_connectBtn = nullptr;
     QPushButton *m_startBtn = nullptr;

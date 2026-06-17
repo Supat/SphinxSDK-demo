@@ -70,6 +70,11 @@ public:
     // therefore cannot touch the protected signals) can surface log lines.
     void postLog(const QString &message) { emit logMessage(message); }
 
+    // Override the Bayer demosaic tile used for color cameras. Index:
+    //   -1 = auto (derive from PixelFormat), 0=RGGB, 1=GBRG, 2=GRBG, 3=BGGR.
+    // Lets the UI correct an R/B swap or green-phase mismatch live.
+    void setBayerPattern(int index) { m_bayerOverride = index; }
+
 signals:
     void frameReady(const QImage &image);     // emitted from the grab thread
     void logMessage(const QString &message);
@@ -100,6 +105,7 @@ private:
     // FPN dark-frame state
     int m_darkCounter = 0;
     long long m_oldExposure = 0;
+    std::atomic<int> m_bayerOverride{-1};   // -1 = auto; else 0..3 (see setBayerPattern)
 
     // buffers (raw pointers into the aligned vectors below)
     std::vector<unsigned char *> m_ring;

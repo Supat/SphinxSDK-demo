@@ -302,9 +302,24 @@ QImage Camera::toQImage(const unsigned char *buf) const
 {
     if (m_pixelFormat == GVSP_PIX_BAYGR8 || m_pixelFormat == GVSP_PIX_BAYRG8)
     {
-        int order = (m_pixelFormat == GVSP_PIX_BAYGR8)
-                        ? BAYER_COLOR_FILTER_GBRG
-                        : BAYER_COLOR_FILTER_BGGR;
+        // Map the UI's 0..3 index to dc1394 tiles. The "right" tile depends on
+        // both the sensor's color-filter phase and the byte order of the sink
+        // (QImage::Format_RGB888 is true R,G,B — unlike save_bmp's BGR), so it
+        // is exposed as a live override rather than hard-coded.
+        static const int kTiles[4] = {
+            BAYER_COLOR_FILTER_RGGB,  // 0
+            BAYER_COLOR_FILTER_GBRG,  // 1
+            BAYER_COLOR_FILTER_GRBG,  // 2
+            BAYER_COLOR_FILTER_BGGR,  // 3
+        };
+        int ov = m_bayerOverride.load();
+        int order;
+        if (ov >= 0 && ov < 4)
+            order = kTiles[ov];
+        else  // auto: true tile for each GigE format with real-RGB output
+            order = (m_pixelFormat == GVSP_PIX_BAYGR8)
+                        ? BAYER_COLOR_FILTER_GRBG
+                        : BAYER_COLOR_FILTER_RGGB;
         bayer_Bilinear(buf, m_rgb.data(), (int)m_width, (int)m_height, order);
         return QImage(m_rgb.data(), (int)m_width, (int)m_height,
                       (int)m_width * 3, QImage::Format_RGB888);

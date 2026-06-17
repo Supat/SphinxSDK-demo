@@ -28,6 +28,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     m_stopBtn    = new QPushButton("Stop");
     m_saveBtn    = new QPushButton("Save…");
 
+    // Bayer tile selector for color cameras. "Auto" uses the format-derived
+    // tile; the explicit entries let the user fix an R/B or green-phase swap.
+    m_bayerCombo = new QComboBox;
+    m_bayerCombo->addItem("Auto");   // -> override -1
+    m_bayerCombo->addItem("RGGB");   // -> 0
+    m_bayerCombo->addItem("GBRG");   // -> 1
+    m_bayerCombo->addItem("GRBG");   // -> 2
+    m_bayerCombo->addItem("BGGR");   // -> 3
+
     auto *controls = new QHBoxLayout;
     controls->addWidget(new QLabel("Device:"));
     controls->addWidget(m_deviceCombo, 1);
@@ -37,6 +46,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     controls->addWidget(m_startBtn);
     controls->addWidget(m_stopBtn);
     controls->addWidget(m_saveBtn);
+    controls->addSpacing(16);
+    controls->addWidget(new QLabel("Bayer:"));
+    controls->addWidget(m_bayerCombo);
 
     // --- live view ---
     m_view = new QLabel("No image");
@@ -68,10 +80,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(m_startBtn,   &QPushButton::clicked, this, &MainWindow::onStart);
     connect(m_stopBtn,    &QPushButton::clicked, this, &MainWindow::onStop);
     connect(m_saveBtn,    &QPushButton::clicked, this, &MainWindow::onSave);
+    connect(m_bayerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::onBayerChanged);
 
     connect(&m_camera, &Camera::frameReady,       this, &MainWindow::onFrame);
     connect(&m_camera, &Camera::logMessage,       this, &MainWindow::onLog);
     connect(&m_camera, &Camera::streamingChanged, this, &MainWindow::onStreamingChanged);
+
+    // GRBG was verified correct for this camera; make it the default tile.
+    m_bayerCombo->setCurrentIndex(3);  // "GRBG"
 
     updateButtons();
     onRefresh();
@@ -137,6 +154,13 @@ void MainWindow::onSave()
         onLog("Saved " + path);
     else
         QMessageBox::warning(this, "Save failed", "Could not write " + path);
+}
+
+void MainWindow::onBayerChanged(int index)
+{
+    // Combo index 0 = "Auto" -> override -1; 1..4 -> tile 0..3.
+    m_camera.setBayerPattern(index - 1);
+    onLog("Bayer pattern: " + m_bayerCombo->currentText());
 }
 
 void MainWindow::onFrame(const QImage &image)
