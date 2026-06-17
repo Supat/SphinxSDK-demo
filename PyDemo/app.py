@@ -219,6 +219,7 @@ class MainWindow(QMainWindow):
         self.bcast_status.setFixedWidth(80)
         self.bcast_status.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
+        # Row 1: device + acquisition controls.
         controls = QHBoxLayout()
         controls.addWidget(QLabel("Device:"))
         controls.addWidget(self.device_combo, 1)
@@ -227,14 +228,17 @@ class MainWindow(QMainWindow):
         controls.addSpacing(12)
         controls.addWidget(self.start_btn)
         controls.addWidget(self.stop_btn)
-        controls.addSpacing(12)
-        controls.addWidget(self.mp_chk)
-        controls.addWidget(self.undistort_chk)
-        controls.addSpacing(12)
-        controls.addWidget(self.bcast_chk)
-        controls.addWidget(QLabel("port:"))
-        controls.addWidget(self.port_spin)
-        controls.addWidget(self.bcast_status)
+
+        # Row 2: processing + broadcast toggles.
+        controls2 = QHBoxLayout()
+        controls2.addWidget(self.mp_chk)
+        controls2.addWidget(self.undistort_chk)
+        controls2.addSpacing(12)
+        controls2.addWidget(self.bcast_chk)
+        controls2.addWidget(QLabel("port:"))
+        controls2.addWidget(self.port_spin)
+        controls2.addWidget(self.bcast_status)
+        controls2.addStretch(1)
 
         self.view = QLabel("No image")
         self.view.setAlignment(Qt.AlignCenter)
@@ -252,6 +256,7 @@ class MainWindow(QMainWindow):
         central = QWidget()
         v = QVBoxLayout(central)
         v.addLayout(controls)
+        v.addLayout(controls2)
         v.addWidget(self.angle_label)
         v.addWidget(self.view, 1)
         v.addWidget(self.log)
