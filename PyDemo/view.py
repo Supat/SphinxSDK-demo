@@ -175,17 +175,18 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.stop_btn)
 
         controls2 = QHBoxLayout()
+        # group: wrist angle + broadcast
         controls2.addWidget(self.mp_chk)
-        controls2.addWidget(self.undistort_chk)
-        controls2.addSpacing(12)
-        controls2.addWidget(QLabel("Orientation:"))
-        controls2.addWidget(self.orient_combo)
-        controls2.addWidget(self.mirror_chk)
-        controls2.addSpacing(12)
         controls2.addWidget(self.bcast_chk)
         controls2.addWidget(QLabel("port:"))
         controls2.addWidget(self.port_spin)
         controls2.addWidget(self.bcast_status)
+        controls2.addSpacing(24)
+        # group: image correction
+        controls2.addWidget(self.undistort_chk)
+        controls2.addWidget(QLabel("Orientation:"))
+        controls2.addWidget(self.orient_combo)
+        controls2.addWidget(self.mirror_chk)
         controls2.addStretch(1)
 
         self.view = QLabel("No image")
