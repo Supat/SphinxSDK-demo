@@ -222,10 +222,10 @@ class WristPresenter:
 
     def _emit_test_pattern(self):
         self._demo_i += 1
-        # 0 -> 90 -> 0 triangle sweep over DEMO_PERIOD_S seconds
+        # 0 -> 180 -> 0 triangle sweep over DEMO_PERIOD_S seconds
         t = self._demo_i * self._demo_timer.interval() / 1000.0
         phase = (t % self.DEMO_PERIOD_S) / self.DEMO_PERIOD_S
-        angle = 90.0 * (1.0 - abs(2.0 * phase - 1.0))
+        angle = 180.0 * (1.0 - abs(2.0 * phase - 1.0))
         self.broadcaster.send({
             "frame": self._demo_i,
             "t": time.time(),
