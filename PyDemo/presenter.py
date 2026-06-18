@@ -6,9 +6,11 @@ widgets and does no rendering (no cv2 overlay, no QImage).
 """
 from __future__ import annotations
 
+import math
 import os
 import subprocess
 import sys
+import time
 
 from PySide6.QtCore import QTimer
 
@@ -54,6 +56,7 @@ class WristPresenter:
         view.generateBoardRequested.connect(self.generate_board)
         view.runCalibrationRequested.connect(self.run_calibration)
         view.testBroadcastRequested.connect(self.test_broadcast)
+        view.testPatternToggled.connect(self.set_test_pattern)
         view.closeRequested.connect(self.shutdown)
 
         # poll the broadcast client count -> View
@@ -61,6 +64,12 @@ class WristPresenter:
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._tick)
         self._timer.start()
+
+        # synthetic test-pattern emitter (off until toggled)
+        self._demo_i = 0
+        self._demo_timer = QTimer()
+        self._demo_timer.setInterval(50)   # ~20 Hz
+        self._demo_timer.timeout.connect(self._emit_test_pattern)
 
         model = undistorter.model if undistorter is not None else ""
         view.set_undistort_available(undistorter is not None, model)
@@ -196,7 +205,31 @@ class WristPresenter:
                          cwd=here, creationflags=flags)
         self.view.log_msg(f"Opened broadcast test client on {ip}:{port}")
 
+    def set_test_pattern(self, on: bool):
+        if on:
+            if not self.broadcaster.is_running():
+                self.view.show_info(
+                    "Test Pattern",
+                    "Emitting a synthetic sweeping wrist angle. Enable "
+                    "Broadcast TCP so connected clients receive it.")
+            self._demo_i = 0
+            self._demo_timer.start()
+            self.view.log_msg("Broadcast test pattern: ON")
+        else:
+            self._demo_timer.stop()
+            self.view.log_msg("Broadcast test pattern: OFF")
+
+    def _emit_test_pattern(self):
+        self._demo_i += 1
+        angle = 135.0 + 45.0 * math.sin(self._demo_i * 0.1)   # sweep ~90..180
+        self.broadcaster.send({
+            "frame": self._demo_i,
+            "t": time.time(),
+            "wrists": [{"side": "demo", "angle_deg": round(angle, 2)}],
+        })
+
     def shutdown(self):
+        self._demo_timer.stop()
         self.stop()
         self.broadcaster.stop()
         self.camera.close()

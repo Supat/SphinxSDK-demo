@@ -130,6 +130,7 @@ class MainWindow(QMainWindow):
     generateBoardRequested = Signal()
     runCalibrationRequested = Signal()
     testBroadcastRequested = Signal()
+    testPatternToggled = Signal(bool)
     closeRequested = Signal()
 
     def __init__(self):
@@ -282,6 +283,10 @@ class MainWindow(QMainWindow):
         test_act = QAction("&Test Broadcast…", self)
         test_act.triggered.connect(self.testBroadcastRequested)
         tools_m.addAction(test_act)
+        self.act_test_pattern = QAction("Broadcast Test &Pattern", self)
+        self.act_test_pattern.setCheckable(True)
+        self.act_test_pattern.toggled.connect(self.testPatternToggled)
+        tools_m.addAction(self.act_test_pattern)
 
         help_m = mb.addMenu("&Help")
         about_act = QAction("&About", self)
