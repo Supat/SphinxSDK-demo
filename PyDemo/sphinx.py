@@ -165,16 +165,12 @@ def _ensure_dll_dir() -> None:
         k.SetDllDirectoryW(SDK_EXTRAS)
 
 
-_DLL_PATH = ""
-
-
 def _load_dll() -> C.WinDLL:
-    global SDK_EXTRAS, _DLL_PATH
+    global SDK_EXTRAS
     sdk = os.environ.get("SPHINX_SDK_DIR", _default_sdk_dir())
     rel64 = os.path.join(sdk, "Release64")
     extras = os.path.join(sdk, "Extras64")
     SDK_EXTRAS = extras
-    _DLL_PATH = os.path.join(rel64, "SphinxLib.dll")
     # Let the loader find SphinxLib.dll + its libxml2/libxslt/MathParser deps.
     for d in (rel64, extras):
         if os.path.isdir(d):
@@ -597,5 +593,5 @@ class Camera:
     def __enter__(self):
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, *_):
         self.close()
