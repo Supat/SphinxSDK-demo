@@ -35,7 +35,15 @@ _MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 # landmark indices
 L_ELBOW, R_ELBOW = 13, 14
 L_WRIST, R_WRIST = 15, 16
+L_PINKY, R_PINKY = 17, 18      # pose pinky knuckle
+L_INDEX, R_INDEX = 19, 20      # pose index knuckle
 H_WRIST, H_MIDDLE_MCP = 0, 9
+
+# pose landmark sets per side: (wrist, elbow, index_knuckle, pinky_knuckle)
+_SIDE_POSE = {
+    "left": (L_WRIST, L_ELBOW, L_INDEX, L_PINKY),
+    "right": (R_WRIST, R_ELBOW, R_INDEX, R_PINKY),
+}
 
 
 def ensure_models(model_dir: str = _MODEL_DIR) -> dict:
@@ -53,10 +61,11 @@ def ensure_models(model_dir: str = _MODEL_DIR) -> dict:
 @dataclass
 class WristResult:
     side: str
-    angle_deg: float
+    angle_deg: float          # 2D image-plane flexion proxy (legacy)
     wrist_px: tuple
     elbow_px: tuple | None
     hand_tip_px: tuple
+    flex_deg: float | None = None   # anatomical flexion/extension (3D, signed)
 
 
 @dataclass
@@ -73,6 +82,33 @@ def _angle(a, b, c) -> float:
         return float("nan")
     cos = float(np.dot(ba, bc) / (nba * nbc))
     return math.degrees(math.acos(max(-1.0, min(1.0, cos))))
+
+
+def _flexion3d(elbow, wrist, index, pinky):
+    """Signed anatomical wrist flexion/extension in degrees from 3D points
+    (all in one camera-aligned frame, e.g. pose world landmarks).
+
+    Builds the medio-lateral axis (index->pinky knuckle) as the flexion axis,
+    projects the forearm (elbow->wrist) and hand (wrist->knuckle midpoint)
+    vectors into the sagittal plane, and returns the signed angle between them
+    about that axis. 0 = straight wrist; sign = flexion vs extension.
+    """
+    forearm = wrist - elbow
+    hand = (index + pinky) / 2.0 - wrist
+    axis = pinky - index
+    na = np.linalg.norm(axis)
+    if na < 1e-6:
+        return None
+    axis = axis / na
+    fp = forearm - np.dot(forearm, axis) * axis
+    hp = hand - np.dot(hand, axis) * axis
+    nf, nh = np.linalg.norm(fp), np.linalg.norm(hp)
+    if nf < 1e-6 or nh < 1e-6:
+        return None
+    fp, hp = fp / nf, hp / nh
+    ang = math.degrees(math.atan2(float(np.dot(np.cross(fp, hp), axis)),
+                                  float(np.dot(fp, hp))))
+    return ang
 
 
 class WristEstimator:
@@ -107,13 +143,20 @@ class WristEstimator:
         res = FrameResult()
 
         pose_wrists = {}  # side -> (wrist_px, elbow_px)
+        side_flex = {}    # side -> anatomical flexion/extension (deg)
         if pose.pose_landmarks:
             lms = pose.pose_landmarks[0]
             res.pose_px = [(p.x * w, p.y * h) for p in lms]
-            for side, wi, ei in (("left", L_WRIST, L_ELBOW), ("right", R_WRIST, R_ELBOW)):
+            for side, (wi, ei, _ii, _pi) in _SIDE_POSE.items():
                 wpx = np.array([lms[wi].x * w, lms[wi].y * h])
                 epx = np.array([lms[ei].x * w, lms[ei].y * h])
                 pose_wrists[side] = (wpx, epx)
+            # 3D anatomical flexion from world landmarks (same camera-aligned frame)
+            world = pose.pose_world_landmarks[0] if pose.pose_world_landmarks else None
+            if world is not None:
+                wpts = np.array([[lm.x, lm.y, lm.z] for lm in world])
+                for side, (wi, ei, ii, pi) in _SIDE_POSE.items():
+                    side_flex[side] = _flexion3d(wpts[ei], wpts[wi], wpts[ii], wpts[pi])
 
         for hand in (hands.hand_landmarks or []):
             res.hands_px.append([(p.x * w, p.y * h) for p in hand])
@@ -135,5 +178,6 @@ class WristEstimator:
                 side=side, angle_deg=angle,
                 wrist_px=(float(hw[0]), float(hw[1])),
                 elbow_px=None if elbow is None else (float(elbow[0]), float(elbow[1])),
-                hand_tip_px=(float(hm[0]), float(hm[1]))))
+                hand_tip_px=(float(hm[0]), float(hm[1])),
+                flex_deg=side_flex.get(side)))
         return res

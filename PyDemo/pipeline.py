@@ -82,13 +82,21 @@ class FramePipeline:
 def format_angles(result: FrameResult) -> str:
     if not result or not result.wrists:
         return "no wrist detected"
-    return "   ".join(f"{w.side}: {w.angle_deg:.0f}°" for w in result.wrists)
+    parts = []
+    for w in result.wrists:
+        if w.flex_deg is not None:
+            parts.append(f"{w.side}: flex {w.flex_deg:+.0f}°")
+        else:
+            parts.append(f"{w.side}: {w.angle_deg:.0f}°")
+    return "   ".join(parts)
 
 
 def to_payload(result: FrameResult, frame_index: int) -> dict:
     return {
         "frame": frame_index,
         "t": time.time(),
-        "wrists": [{"side": w.side, "angle_deg": round(w.angle_deg, 2)}
+        "wrists": [{"side": w.side,
+                    "angle_deg": round(w.angle_deg, 2),
+                    "flex_deg": None if w.flex_deg is None else round(w.flex_deg, 2)}
                    for w in result.wrists],
     }

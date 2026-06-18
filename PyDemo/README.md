@@ -126,10 +126,12 @@ server. While streaming with MediaPipe on, every frame with a detected wrist is
 pushed to all connected clients as one line of JSON:
 
 ```json
-{"frame": 42, "t": 1718638655.12, "wrists": [{"side": "left", "angle_deg": 168.4}]}
+{"frame": 42, "t": 1718638655.12, "wrists": [{"side": "left", "angle_deg": 168.4, "flex_deg": 12.3}]}
 ```
 
-The toolbar shows the live client count. Consume it from anything that speaks
+`angle_deg` is the 2D image-plane flexion proxy; `flex_deg` is the signed
+**anatomical flexion/extension** (3D, from pose world landmarks; 0 = straight,
+`null` if the body/forearm wasn't detected). The toolbar shows the live client count. Consume it from anything that speaks
 TCP — e.g. the included example:
 
 ```bat

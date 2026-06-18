@@ -32,7 +32,9 @@ def draw_overlay(rgb, result: FrameResult):
         if wr.elbow_px is not None:
             cv2.line(out, tuple(map(int, wr.elbow_px)), wpx, (255, 128, 0), 2)
         cv2.circle(out, wpx, 6, (0, 0, 255), -1)
-        cv2.putText(out, f"{wr.side}: {wr.angle_deg:.0f} deg",
+        label = (f"{wr.side}: flex {wr.flex_deg:+.0f} deg"
+                 if wr.flex_deg is not None else f"{wr.side}: {wr.angle_deg:.0f} deg")
+        cv2.putText(out, label,
                     (wpx[0] + 8, wpx[1] - 8), cv2.FONT_HERSHEY_SIMPLEX,
                     0.7, (0, 0, 255), 2, cv2.LINE_AA)
     return out
