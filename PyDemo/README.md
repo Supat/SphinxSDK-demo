@@ -58,6 +58,15 @@ Intentional naming exceptions are scoped per-file with rationale: the ctypes
 binding mirrors the C SDK names (`sphinx.py`), and Qt signals/overrides are
 camelCase by Qt convention (`view.py`, `capture.py`).
 
+A pre-commit hook (repo-root `.pre-commit-config.yaml`) runs `ruff check` on
+staged `PyDemo/*.py` so violations are caught before commit. Enable it once per
+clone:
+
+```bash
+python -m pip install pre-commit
+python -m pre_commit install
+```
+
 ## Lens-distortion correction
 
 The camera streams **raw, uncorrected** pixels (no distortion-correction exists

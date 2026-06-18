@@ -5,3 +5,4 @@ PySide6
 
 # dev
 ruff
+pre-commit
