@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         self.stop_btn = QPushButton("Stop")
         self.mp_chk = QCheckBox("Wrist angle (MediaPipe)")
         self.mp_chk.setChecked(True)
-        self.undistort_chk = QCheckBox("Undistort")
+        self.undistort_chk = QCheckBox("Lens Correction")
         self.undistort_chk.setEnabled(False)
         self.orient_combo = QComboBox()
         for label, deg in (("0°", 0), ("90° CW", 90), ("180°", 180), ("270° CW", 270)):
