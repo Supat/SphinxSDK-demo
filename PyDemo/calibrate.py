@@ -23,6 +23,7 @@ from charuco import build_board
 
 MIN_CORNERS = 6
 MIN_VIEWS = 6
+TARGET_VIEWS = 20      # recommended number of views to capture
 
 
 def _calibrate_standard(obj, img, size):
@@ -112,8 +113,14 @@ def main() -> int:
             n = 0 if ch_ids is None else len(ch_ids)
             if n > 0:
                 cv2.aruco.drawDetectedCornersCharuco(disp, ch_corners, ch_ids)
-            cv2.putText(disp, f"views: {len(obj_points)}   corners: {n}",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            remaining = max(0, TARGET_VIEWS - len(obj_points))
+            if remaining:
+                msg = f"views: {len(obj_points)}/{TARGET_VIEWS}  ({remaining} to go)   corners: {n}"
+                color = (0, 255, 0)
+            else:
+                msg = f"views: {len(obj_points)}/{TARGET_VIEWS}  ready - press 'c'   corners: {n}"
+                color = (0, 255, 255)
+            cv2.putText(disp, msg, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
             cv2.imshow(win, disp)
 
             k = cv2.waitKey(1) & 0xFF
