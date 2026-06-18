@@ -218,11 +218,13 @@ class WristPresenter:
             self._demo_timer.stop()
             self.view.log_msg("Broadcast test pattern: OFF")
 
+    DEMO_PERIOD_S = 30.0   # one full 0 -> 90 -> 0 sweep lasts this long
+
     def _emit_test_pattern(self):
         self._demo_i += 1
-        # 0 -> 90 -> 0 triangle sweep, one full cycle per second (~1 Hz)
+        # 0 -> 90 -> 0 triangle sweep over DEMO_PERIOD_S seconds
         t = self._demo_i * self._demo_timer.interval() / 1000.0
-        phase = t % 1.0
+        phase = (t % self.DEMO_PERIOD_S) / self.DEMO_PERIOD_S
         angle = 90.0 * (1.0 - abs(2.0 * phase - 1.0))
         self.broadcaster.send({
             "frame": self._demo_i,
