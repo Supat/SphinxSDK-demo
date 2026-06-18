@@ -15,6 +15,19 @@ import socket
 import threading
 
 
+def local_ip() -> str:
+    """Best-effort primary LAN IPv4 of this host (not loopback). Uses a UDP
+    socket's chosen route; sends nothing. Falls back to 127.0.0.1."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
 class AngleBroadcaster:
     SEND_TIMEOUT = 2.0   # seconds; a client slower than this is dropped
 

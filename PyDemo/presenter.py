@@ -13,7 +13,7 @@ import sys
 from PySide6.QtCore import QTimer
 
 import sphinx
-from broadcaster import AngleBroadcaster
+from broadcaster import AngleBroadcaster, local_ip
 from capture import CaptureThread
 from pipeline import FramePipeline, PipelineOptions, format_angles, to_payload
 
@@ -124,7 +124,7 @@ class WristPresenter:
         if on:
             try:
                 self.broadcaster.start(port=port)
-                self.view.log_msg(f"Broadcasting wrist angles on TCP :{port}")
+                self.view.log_msg(f"Broadcasting wrist angles on {local_ip()}:{port}")
             except OSError as e:
                 self.view.uncheck_broadcast()
                 self.view.show_error("Broadcast failed", str(e))
@@ -190,10 +190,11 @@ class WristPresenter:
             return
         here = os.path.dirname(os.path.abspath(__file__))
         port = self.broadcaster.port
+        ip = local_ip()
         flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
-        subprocess.Popen([sys.executable, "tcp_client.py", "127.0.0.1", str(port)],
+        subprocess.Popen([sys.executable, "tcp_client.py", ip, str(port)],
                          cwd=here, creationflags=flags)
-        self.view.log_msg(f"Opened broadcast test client on 127.0.0.1:{port}")
+        self.view.log_msg(f"Opened broadcast test client on {ip}:{port}")
 
     def shutdown(self):
         self.stop()
