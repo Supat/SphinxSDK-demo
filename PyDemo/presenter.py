@@ -6,7 +6,6 @@ widgets and does no rendering (no cv2 overlay, no QImage).
 """
 from __future__ import annotations
 
-import math
 import os
 import subprocess
 import sys
@@ -221,7 +220,10 @@ class WristPresenter:
 
     def _emit_test_pattern(self):
         self._demo_i += 1
-        angle = 135.0 + 45.0 * math.sin(self._demo_i * 0.1)   # sweep ~90..180
+        # 0 -> 90 -> 0 triangle sweep, one full cycle per second (~1 Hz)
+        t = self._demo_i * self._demo_timer.interval() / 1000.0
+        phase = t % 1.0
+        angle = 90.0 * (1.0 - abs(2.0 * phase - 1.0))
         self.broadcaster.send({
             "frame": self._demo_i,
             "t": time.time(),
