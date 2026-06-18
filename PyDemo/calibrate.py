@@ -95,7 +95,14 @@ def main() -> int:
     win = "calibrate - SPACE capture / c calibrate / q quit"
     try:
         while True:
-            frame, _ = cam.get_frame()
+            try:
+                frame, _ = cam.get_frame()
+            except sphinx.SphinxError:
+                # Tolerate transient grab errors (e.g. a dropped packet) instead
+                # of losing the whole session; stay responsive to 'q'.
+                if (cv2.waitKey(1) & 0xFF) == ord('q'):
+                    break
+                continue
             rgb = frame if frame.ndim == 3 else cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
             gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
             size = (gray.shape[1], gray.shape[0])
