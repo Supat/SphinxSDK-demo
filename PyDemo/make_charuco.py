@@ -10,10 +10,16 @@ from charuco import SQUARES_X, SQUARES_Y, build_board
 OUT_W, OUT_H = 1754, 1240
 
 
-def main() -> int:
+def save_board(path: str = "charuco_board.png") -> str:
+    """Render the ChArUco board to `path`; return the path written."""
     _, board = build_board()
     img = board.generateImage((OUT_W, OUT_H), marginSize=40, borderBits=1)
-    cv2.imwrite("charuco_board.png", img)
+    cv2.imwrite(path, img)
+    return path
+
+
+def main() -> int:
+    save_board()
     print(f"Wrote charuco_board.png  ({SQUARES_X}x{SQUARES_Y} ChArUco).")
     print("Print it, mount flat, then run:  python calibrate.py")
     return 0

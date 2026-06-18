@@ -6,6 +6,10 @@ widgets and does no rendering (no cv2 overlay, no QImage).
 """
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 from PySide6.QtCore import QTimer
 
 import sphinx
@@ -47,6 +51,8 @@ class WristPresenter:
         view.orientationChanged.connect(self.set_rotation)
         view.mirrorToggled.connect(self.set_mirror)
         view.broadcastToggled.connect(self.set_broadcast)
+        view.generateBoardRequested.connect(self.generate_board)
+        view.runCalibrationRequested.connect(self.run_calibration)
         view.closeRequested.connect(self.shutdown)
 
         # poll the broadcast client count -> View
@@ -150,6 +156,32 @@ class WristPresenter:
                 curated.append((label, fi))
         all_features = self.camera.feature_list()
         self.view.populate_features(curated, all_features, access=self.camera)
+
+    # ---- tools ----
+    def generate_board(self):
+        from make_charuco import save_board
+        here = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(here, "charuco_board.png")
+        save_board(path)
+        self.view.log_msg(f"Saved {path}")
+        self.view.show_info("ChArUco board", f"Saved board to:\n{path}\n\n"
+                            "Print it, mount it flat, then run Lens Calibration.")
+
+    def run_calibration(self):
+        if self.thread is not None:
+            self.view.show_error("Calibration", "Stop streaming before calibrating.")
+            return
+        # Release the camera so the external calibrator can open it exclusively.
+        self.camera.close()
+        self.view.set_connected(False)
+        here = os.path.dirname(os.path.abspath(__file__))
+        subprocess.Popen([sys.executable, "calibrate.py"], cwd=here)
+        self.view.log_msg("Launched calibrate.py — reconnect the camera after it finishes.")
+        self.view.show_info(
+            "Lens Calibration",
+            "Calibration launched in a separate window.\n\n"
+            "Capture board views there (SPACE), press 'c' to save calib.json, "
+            "then reconnect the camera here and enable Lens Correction.")
 
     def shutdown(self):
         self.stop()

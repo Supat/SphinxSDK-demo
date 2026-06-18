@@ -126,6 +126,8 @@ class MainWindow(QMainWindow):
     orientationChanged = Signal(int)       # rotation degrees: 0/90/180/270
     mirrorToggled = Signal(bool)
     broadcastToggled = Signal(bool, int)   # (on, port)
+    generateBoardRequested = Signal()
+    runCalibrationRequested = Signal()
     closeRequested = Signal()
 
     def __init__(self):
@@ -261,6 +263,14 @@ class MainWindow(QMainWindow):
         self.act_stop.triggered.connect(self.stopRequested)
         cam_m.addAction(self.act_stop)
 
+        tools_m = mb.addMenu("&Tools")
+        board_act = QAction("&Generate ChArUco Board…", self)
+        board_act.triggered.connect(self.generateBoardRequested)
+        tools_m.addAction(board_act)
+        self.act_calibrate = QAction("Run Lens &Calibration…", self)
+        self.act_calibrate.triggered.connect(self.runCalibrationRequested)
+        tools_m.addAction(self.act_calibrate)
+
         help_m = mb.addMenu("&Help")
         about_act = QAction("&About", self)
         about_act.triggered.connect(
@@ -299,6 +309,9 @@ class MainWindow(QMainWindow):
 
     def show_error(self, title: str, msg: str) -> None:
         QMessageBox.warning(self, title, msg)
+
+    def show_info(self, title: str, msg: str) -> None:
+        QMessageBox.information(self, title, msg)
 
     def set_broadcast_status(self, text: str) -> None:
         self.bcast_status.setText(text)
