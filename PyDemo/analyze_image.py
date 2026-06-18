@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 
 from wrist import WristEstimator
+from overlay import draw_overlay
 
 
 def analyze(rgb: np.ndarray, out_path: str) -> None:
@@ -30,7 +31,7 @@ def analyze(rgb: np.ndarray, out_path: str) -> None:
         kind = "flexion" if wr.elbow_px else "hand-orientation (no forearm)"
         print(f"  {wr.side}: {wr.angle_deg:.1f} deg  [{kind}]")
 
-    annotated = WristEstimator.draw(rgb, res)
+    annotated = draw_overlay(rgb, res)
     cv2.imwrite(out_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
     print(f"  saved {out_path}")
 

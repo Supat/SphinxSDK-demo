@@ -5,20 +5,50 @@ via `ctypes`. This is the base for the planned MediaPipe wrist-angle work and a
 future PySide6 UI; it replaces the C++ acquisition path with NumPy-friendly
 frames.
 
+## Architecture (MVP)
+
+The live app follows Model–View–Presenter so the UI, orchestration, and domain
+logic stay separable and testable:
+
+```
+app.py            composition root: builds Model + View + Presenter and wires them
+view.py           View (passive): widgets, intent signals, render methods. All Qt
+                  and rendering live here; it holds no camera/service references.
+presenter.py      Presenter: the only layer that knows both sides. Handles View
+                  intents, drives the camera/services/thread, pushes results back.
+capture.py        CaptureThread (QThread): runs the pipeline off the GUI thread,
+                  emits domain ProcessedFrame (image + readings) — no QImage.
+pipeline.py       FramePipeline (Qt-free): raw frame + options -> ProcessedFrame;
+                  also format_angles() / to_payload(). Reused by the offline tools.
+overlay.py        draw_overlay(): renders pose/wrist results onto an image.
+sphinx.py         Model: Camera (acquisition + GenICam features), FPN, demosaic.
+wrist.py          WristEstimator (MediaPipe Tasks Pose+Hands); estimation only.
+undistort.py      Undistorter service.  broadcaster.py  AngleBroadcaster service.
+```
+
+User action → View emits an intent signal → Presenter acts on the Model →
+Presenter calls View render methods. The View never touches the camera/services
+directly (feature editors go through a small `FeatureAccess` interface).
+
 ## Files
 
 | File | Role |
 |------|------|
-| `sphinx.py` | ctypes binding: SDK structs, function prototypes, and a `Camera` class (`discover`, `open`, `start`, `stop`/`close`, `get_frame` → NumPy, plus the generic GenICam feature API). FPN dark-frame subtraction and Bayer demosaic are done in NumPy/OpenCV. |
-| `capture_test.py` | Smoke test: discover → connect → grab N frames → save `capture.png`. |
-| `wrist.py` | `WristEstimator` — MediaPipe **Tasks** Pose + Hands; computes wrist flexion (forearm vs hand axis) and draws an overlay. Auto-downloads the `.task` models to `models/` on first use. |
-| `analyze_image.py` | Offline check: run the estimator on an image (`python analyze_image.py [path]`) or a live grab (`python analyze_image.py --grab [N]`); saves an annotated PNG. |
-| `app.py` | PySide6 live app: stream + MediaPipe overlay + wrist-angle readout, device select/connect/start-stop, exposure/gain controls, a generic feature grid, and a TCP broadcast toggle. |
-| `broadcaster.py` | `AngleBroadcaster` — a small TCP server that streams wrist readings as newline-delimited JSON to any connected clients. |
-| `tcp_client.py` | Example consumer: connects and prints each reading. |
-| `charuco.py` / `make_charuco.py` | Shared ChArUco board definition + printable-board generator. |
-| `calibrate.py` | Live lens calibration: capture ChArUco views, calibrate, save `calib.json`. |
-| `undistort.py` | `Undistorter` — applies `calib.json` to frames (cached remap). |
+| `sphinx.py` | Model: ctypes SDK binding + `Camera` (`discover`/`open`/`start`/`stop`/`get_frame`→NumPy + GenICam feature API). FPN + Bayer demosaic in NumPy/OpenCV. |
+| `pipeline.py` | Qt-free `FramePipeline` (undistort → downscale → estimate) + `format_angles`/`to_payload`. |
+| `wrist.py` | `WristEstimator` — MediaPipe Tasks Pose+Hands; wrist flexion. Auto-downloads `.task` models to `models/`. |
+| `overlay.py` | `draw_overlay()` — pose/wrist visualisation onto a frame. |
+| `capture.py` | `CaptureThread` — runs the pipeline off the GUI thread. |
+| `view.py` | Passive PySide6 View + feature-editor factory. |
+| `presenter.py` | `WristPresenter` — orchestration. |
+| `app.py` | Composition root (`python app.py` / `run_app.bat`). |
+| `broadcaster.py` | `AngleBroadcaster` — TCP server streaming readings as JSONL. |
+| `tcp_client.py` | Example broadcast consumer. |
+| `capture_test.py` | Smoke test: discover → grab N → save `capture.png`. |
+| `analyze_image.py` | Offline estimator on an image or live grab; saves annotated PNG. |
+| `charuco.py` / `make_charuco.py` | Shared ChArUco board + printable generator. |
+| `calibrate.py` | Live lens calibration → `calib.json`. |
+| `undistort.py` | `Undistorter` — applies `calib.json` (cached remap). |
 
 ## Lens-distortion correction
 

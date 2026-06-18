@@ -37,9 +37,6 @@ L_ELBOW, R_ELBOW = 13, 14
 L_WRIST, R_WRIST = 15, 16
 H_WRIST, H_MIDDLE_MCP = 0, 9
 
-# minimal pose skeleton for overlay (index pairs)
-_POSE_EDGES = [(11, 13), (13, 15), (12, 14), (14, 16), (11, 12)]
-
 
 def ensure_models(model_dir: str = _MODEL_DIR) -> dict:
     os.makedirs(model_dir, exist_ok=True)
@@ -140,28 +137,3 @@ class WristEstimator:
                 elbow_px=None if elbow is None else (float(elbow[0]), float(elbow[1])),
                 hand_tip_px=(float(hm[0]), float(hm[1]))))
         return res
-
-    @staticmethod
-    def draw(rgb: np.ndarray, res: FrameResult) -> np.ndarray:
-        import cv2
-        out = rgb.copy()
-        # pose skeleton (arms + shoulders)
-        if res.pose_px:
-            for a, b in _POSE_EDGES:
-                if a < len(res.pose_px) and b < len(res.pose_px):
-                    cv2.line(out, tuple(map(int, res.pose_px[a])),
-                             tuple(map(int, res.pose_px[b])), (0, 200, 0), 2)
-        for hand in res.hands_px:
-            for x, y in hand:
-                cv2.circle(out, (int(x), int(y)), 2, (200, 200, 0), -1)
-        for wr in res.wrists:
-            wpx = tuple(map(int, wr.wrist_px))
-            tip = tuple(map(int, wr.hand_tip_px))
-            cv2.line(out, wpx, tip, (0, 255, 255), 2)
-            if wr.elbow_px is not None:
-                cv2.line(out, tuple(map(int, wr.elbow_px)), wpx, (255, 128, 0), 2)
-            cv2.circle(out, wpx, 6, (0, 0, 255), -1)
-            cv2.putText(out, f"{wr.side}: {wr.angle_deg:.0f} deg",
-                        (wpx[0] + 8, wpx[1] - 8), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7, (0, 0, 255), 2, cv2.LINE_AA)
-        return out
