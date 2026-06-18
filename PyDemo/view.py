@@ -123,6 +123,8 @@ class MainWindow(QMainWindow):
     stopRequested = Signal()
     mediapipeToggled = Signal(bool)
     undistortToggled = Signal(bool)
+    orientationChanged = Signal(int)       # rotation degrees: 0/90/180/270
+    mirrorToggled = Signal(bool)
     broadcastToggled = Signal(bool, int)   # (on, port)
     closeRequested = Signal()
 
@@ -142,6 +144,10 @@ class MainWindow(QMainWindow):
         self.mp_chk.setChecked(True)
         self.undistort_chk = QCheckBox("Undistort")
         self.undistort_chk.setEnabled(False)
+        self.orient_combo = QComboBox()
+        for label, deg in (("0°", 0), ("90° CW", 90), ("180°", 180), ("270° CW", 270)):
+            self.orient_combo.addItem(label, deg)
+        self.mirror_chk = QCheckBox("Mirror")
         self.bcast_chk = QCheckBox("Broadcast TCP")
         self.port_spin = QSpinBox()
         self.port_spin.setRange(1024, 65535)
@@ -162,6 +168,10 @@ class MainWindow(QMainWindow):
         controls2 = QHBoxLayout()
         controls2.addWidget(self.mp_chk)
         controls2.addWidget(self.undistort_chk)
+        controls2.addSpacing(12)
+        controls2.addWidget(QLabel("Orientation:"))
+        controls2.addWidget(self.orient_combo)
+        controls2.addWidget(self.mirror_chk)
         controls2.addSpacing(12)
         controls2.addWidget(self.bcast_chk)
         controls2.addWidget(QLabel("port:"))
@@ -214,6 +224,9 @@ class MainWindow(QMainWindow):
         self.stop_btn.clicked.connect(self.stopRequested)
         self.mp_chk.toggled.connect(self.mediapipeToggled)
         self.undistort_chk.toggled.connect(self.undistortToggled)
+        self.orient_combo.currentIndexChanged.connect(
+            lambda _i: self.orientationChanged.emit(self.orient_combo.currentData()))
+        self.mirror_chk.toggled.connect(self.mirrorToggled)
         self.bcast_chk.toggled.connect(
             lambda on: self.broadcastToggled.emit(on, self.port_spin.value()))
 

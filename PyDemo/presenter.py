@@ -44,6 +44,8 @@ class WristPresenter:
         view.stopRequested.connect(self.stop)
         view.mediapipeToggled.connect(self.set_mediapipe)
         view.undistortToggled.connect(self.set_undistort)
+        view.orientationChanged.connect(self.set_rotation)
+        view.mirrorToggled.connect(self.set_mirror)
         view.broadcastToggled.connect(self.set_broadcast)
         view.closeRequested.connect(self.shutdown)
 
@@ -104,6 +106,12 @@ class WristPresenter:
 
     def set_undistort(self, on: bool):
         self.options.use_undistort = on
+
+    def set_rotation(self, degrees: int):
+        self.options.rotation = degrees
+
+    def set_mirror(self, on: bool):
+        self.options.mirror = on
 
     def set_broadcast(self, on: bool, port: int):
         if on:

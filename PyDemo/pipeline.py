@@ -20,6 +20,23 @@ class PipelineOptions:
     use_mediapipe: bool = True
     use_undistort: bool = True
     infer_width: int = 800
+    rotation: int = 0          # 0 / 90 / 180 / 270 degrees clockwise
+    mirror: bool = False       # horizontal flip (rotation + mirror covers all 8)
+
+
+_ROTATIONS = {
+    90: cv2.ROTATE_90_CLOCKWISE,
+    180: cv2.ROTATE_180,
+    270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+}
+
+
+def orient(rgb: np.ndarray, rotation: int, mirror: bool) -> np.ndarray:
+    if rotation in _ROTATIONS:
+        rgb = cv2.rotate(rgb, _ROTATIONS[rotation])
+    if mirror:
+        rgb = cv2.flip(rgb, 1)
+    return rgb
 
 
 @dataclass
@@ -47,7 +64,9 @@ class FramePipeline:
         self._i += 1
         rgb = raw if raw.ndim == 3 else cv2.cvtColor(raw, cv2.COLOR_GRAY2RGB)
         if opts.use_undistort and self._undistorter is not None:
-            rgb = self._undistorter.apply(rgb)
+            rgb = self._undistorter.apply(rgb)   # on raw orientation; maps match
+        if opts.rotation or opts.mirror:
+            rgb = orient(rgb, opts.rotation, opts.mirror)
         if rgb.shape[1] > opts.infer_width:
             s = opts.infer_width / rgb.shape[1]
             rgb = cv2.resize(rgb, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
