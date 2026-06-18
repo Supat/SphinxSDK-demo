@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
+    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -142,6 +143,12 @@ class MainWindow(QMainWindow):
         self.connect_btn = QPushButton("Connect")
         self.start_btn = QPushButton("Start")
         self.stop_btn = QPushButton("Stop")
+        # built-in (QStyle) icons — cross-platform, no asset files needed
+        st = self.style()
+        self.refresh_btn.setIcon(st.standardIcon(QStyle.SP_BrowserReload))
+        self.connect_btn.setIcon(st.standardIcon(QStyle.SP_DriveNetIcon))
+        self.start_btn.setIcon(st.standardIcon(QStyle.SP_MediaPlay))
+        self.stop_btn.setIcon(st.standardIcon(QStyle.SP_MediaStop))
         self.mp_chk = QCheckBox("Wrist angle (MediaPipe)")
         self.mp_chk.setChecked(True)
         self.undistort_chk = QCheckBox("Lens Correction")
