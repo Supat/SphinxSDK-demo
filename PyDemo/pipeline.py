@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from wrist import WristEstimator, FrameResult
+from wrist import FrameResult, WristEstimator
 
 
 @dataclass

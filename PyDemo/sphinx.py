@@ -10,13 +10,23 @@ exactly (default MSVC packing == ctypes natural alignment on x64).
 """
 from __future__ import annotations
 
+import ctypes as C
 import os
 import shutil
-import ctypes as C
 from ctypes import (
-    Structure, POINTER, byref,
-    c_uint8, c_uint16, c_uint32, c_int32, c_int64, c_uint64,
-    c_int, c_double, c_char, c_char_p, c_void_p,
+    POINTER,
+    Structure,
+    byref,
+    c_char,
+    c_char_p,
+    c_double,
+    c_int,
+    c_int64,
+    c_uint8,
+    c_uint16,
+    c_uint32,
+    c_uint64,
+    c_void_p,
 )
 from dataclasses import dataclass, field
 
@@ -552,7 +562,9 @@ class Camera:
 
         def _q(fn):
             b = C.create_string_buffer(256)
-            return b.value.decode("latin-1") if fn(self.cam, name.encode("latin-1"), b, 256) == 0 else ""
+            if fn(self.cam, name.encode("latin-1"), b, 256) == 0:
+                return b.value.decode("latin-1")
+            return ""
 
         fi.display_name = _q(_GEVGetFeatureDisplayName) or name
         fi.tooltip = _q(_GEVGetFeatureTooltip)

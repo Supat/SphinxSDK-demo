@@ -14,7 +14,6 @@ Tips: cover the whole field of view, tilt the board, include the corners, and
 capture 12-20 varied views for a good fit.
 """
 import json
-import sys
 
 import cv2
 import numpy as np

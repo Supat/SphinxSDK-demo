@@ -9,9 +9,9 @@ from __future__ import annotations
 from PySide6.QtCore import QTimer
 
 import sphinx
-from pipeline import FramePipeline, PipelineOptions, format_angles, to_payload
-from capture import CaptureThread
 from broadcaster import AngleBroadcaster
+from capture import CaptureThread
+from pipeline import FramePipeline, PipelineOptions, format_angles, to_payload
 
 # Curated controls to surface (presentation policy lives here, not in the View).
 CONTROL_TARGETS = [

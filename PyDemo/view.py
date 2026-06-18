@@ -10,10 +10,26 @@ import numpy as np
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QLabel, QComboBox, QPushButton, QCheckBox,
-    QHBoxLayout, QVBoxLayout, QFormLayout, QDoubleSpinBox, QLineEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView, QDockWidget, QTabWidget,
-    QPlainTextEdit, QMessageBox, QAbstractItemView, QSpinBox,
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QDockWidget,
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from overlay import draw_overlay
@@ -192,12 +208,14 @@ class MainWindow(QMainWindow):
 
         # translate widget events -> intent signals
         self.refresh_btn.clicked.connect(self.refreshRequested)
-        self.connect_btn.clicked.connect(lambda: self.connectRequested.emit(self.device_combo.currentIndex()))
+        self.connect_btn.clicked.connect(
+            lambda: self.connectRequested.emit(self.device_combo.currentIndex()))
         self.start_btn.clicked.connect(self.startRequested)
         self.stop_btn.clicked.connect(self.stopRequested)
         self.mp_chk.toggled.connect(self.mediapipeToggled)
         self.undistort_chk.toggled.connect(self.undistortToggled)
-        self.bcast_chk.toggled.connect(lambda on: self.broadcastToggled.emit(on, self.port_spin.value()))
+        self.bcast_chk.toggled.connect(
+            lambda on: self.broadcastToggled.emit(on, self.port_spin.value()))
 
         self._update_buttons()
 

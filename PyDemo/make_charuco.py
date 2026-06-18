@@ -4,7 +4,7 @@ Print it (any scale), mount it flat on a rigid surface, then run calibrate.py.
 """
 import cv2
 
-from charuco import build_board, SQUARES_X, SQUARES_Y
+from charuco import SQUARES_X, SQUARES_Y, build_board
 
 # ~A4 landscape at ~150 DPI; aspect roughly matches the 7x5 board.
 OUT_W, OUT_H = 1754, 1240

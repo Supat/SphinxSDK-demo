@@ -37,8 +37,10 @@ class Undistorter:
         # scale intrinsics if the live resolution differs from calibration
         sx, sy = w / self.calib_size[0], h / self.calib_size[1]
         K = self.K.copy()
-        K[0, 0] *= sx; K[0, 2] *= sx
-        K[1, 1] *= sy; K[1, 2] *= sy
+        K[0, 0] *= sx
+        K[0, 2] *= sx
+        K[1, 1] *= sy
+        K[1, 2] *= sy
 
         if self.model == "fisheye":
             new_k = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
@@ -60,7 +62,6 @@ class Undistorter:
 
 if __name__ == "__main__":
     # Self-test with a synthetic calibration on capture.png (if present).
-    import sys
     test_calib = {
         "model": "standard",
         "K": [[800.0, 0.0, 640.0], [0.0, 800.0, 480.0], [0.0, 0.0, 1.0]],

@@ -12,13 +12,13 @@ so we use the Tasks landmarkers and download the .task models on first use.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import math
 import os
 import urllib.request
+from dataclasses import dataclass, field
 
-import numpy as np
 import mediapipe as mp
+import numpy as np
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision
 

@@ -12,8 +12,8 @@ import sys
 import cv2
 import numpy as np
 
-from wrist import WristEstimator
 from overlay import draw_overlay
+from wrist import WristEstimator
 
 
 def analyze(rgb: np.ndarray, out_path: str) -> None:

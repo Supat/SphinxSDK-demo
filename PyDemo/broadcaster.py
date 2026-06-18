@@ -47,7 +47,7 @@ class AngleBroadcaster:
         while self._running:
             try:
                 conn, _addr = self._srv.accept()
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 break

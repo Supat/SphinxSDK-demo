@@ -1,0 +1,24 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "I", "UP"]
+
+# Naming (pep8-naming, N) is enabled but with documented exceptions for the
+# two domains where the linter's rules fight intentional conventions:
+extend-select = ["N"]
+
+[tool.ruff.lint.per-file-ignores]
+# sphinx.py mirrors the C SDK structs/types verbatim from SphinxLib.h so the
+# binding cross-references 1:1, and uses the concise `ctypes as C` alias. E501 is
+# allowed for the tabular block of ctypes _proto(...) declarations, which read
+# best one-per-line.
+"sphinx.py" = ["N801", "N812", "E501"]
+# Qt signals and overrides are camelCase by Qt/PySide convention; closeEvent
+# overrides QWidget.closeEvent so its name is fixed by the framework.
+"view.py" = ["N802", "N815"]
+"capture.py" = ["N815"]
+# K (camera matrix) and D (distortion) follow standard computer-vision notation.
+"calibrate.py" = ["N806"]
+"undistort.py" = ["N806"]

@@ -2,3 +2,6 @@ numpy
 opencv-python
 mediapipe
 PySide6
+
+# dev
+ruff

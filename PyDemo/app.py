@@ -12,10 +12,10 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 import sphinx
-from view import MainWindow
-from presenter import WristPresenter
 from broadcaster import AngleBroadcaster
+from presenter import WristPresenter
 from undistort import Undistorter
+from view import MainWindow
 
 
 def main() -> int:

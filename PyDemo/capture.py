@@ -9,7 +9,7 @@ from __future__ import annotations
 from PySide6.QtCore import QThread, Signal
 
 import sphinx
-from pipeline import FramePipeline, PipelineOptions, ProcessedFrame
+from pipeline import FramePipeline, PipelineOptions
 
 
 class CaptureThread(QThread):

@@ -50,6 +50,14 @@ directly (feature editors go through a small `FeatureAccess` interface).
 | `calibrate.py` | Live lens calibration → `calib.json`. |
 | `undistort.py` | `Undistorter` — applies `calib.json` (cached remap). |
 
+## Code style
+
+Linted with [ruff](https://docs.astral.sh/ruff/); config in `pyproject.toml`
+(line length 100; `E,W,F,B,I,UP,N` selected). Run `ruff check .` from `PyDemo/`.
+Intentional naming exceptions are scoped per-file with rationale: the ctypes
+binding mirrors the C SDK names (`sphinx.py`), and Qt signals/overrides are
+camelCase by Qt convention (`view.py`, `capture.py`).
+
 ## Lens-distortion correction
 
 The camera streams **raw, uncorrected** pixels (no distortion-correction exists
