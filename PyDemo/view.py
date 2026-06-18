@@ -8,7 +8,7 @@ from typing import Protocol
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -230,7 +230,46 @@ class MainWindow(QMainWindow):
         self.bcast_chk.toggled.connect(
             lambda on: self.broadcastToggled.emit(on, self.port_spin.value()))
 
+        self._build_menu()
         self._update_buttons()
+
+    def _build_menu(self) -> None:
+        """Menu bar reusing the same intent signals as the toolbar. Start/Stop/
+        Connect/Refresh actions are enable-synced in _update_buttons()."""
+        mb = self.menuBar()
+
+        file_m = mb.addMenu("&File")
+        self.act_refresh = QAction("&Refresh", self)
+        self.act_refresh.setShortcut(QKeySequence("F5"))
+        self.act_refresh.triggered.connect(self.refreshRequested)
+        file_m.addAction(self.act_refresh)
+        self.act_connect = QAction("&Connect", self)
+        self.act_connect.triggered.connect(
+            lambda: self.connectRequested.emit(self.device_combo.currentIndex()))
+        file_m.addAction(self.act_connect)
+        file_m.addSeparator()
+        quit_act = QAction("&Quit", self)
+        quit_act.setShortcut(QKeySequence.Quit)
+        quit_act.triggered.connect(self.close)
+        file_m.addAction(quit_act)
+
+        cam_m = mb.addMenu("&Camera")
+        self.act_start = QAction("&Start", self)
+        self.act_start.triggered.connect(self.startRequested)
+        cam_m.addAction(self.act_start)
+        self.act_stop = QAction("Sto&p", self)
+        self.act_stop.triggered.connect(self.stopRequested)
+        cam_m.addAction(self.act_stop)
+
+        help_m = mb.addMenu("&Help")
+        about_act = QAction("&About", self)
+        about_act.triggered.connect(
+            lambda: QMessageBox.about(
+                self, "About",
+                "Sphinx + MediaPipe wrist-angle demo.\n"
+                "GigE Vision capture, lens correction, wrist-angle estimation,\n"
+                "and TCP broadcast."))
+        help_m.addAction(about_act)
 
     # ---- render methods (called by the presenter) ----
     def show_devices(self, names: list[str]) -> None:
@@ -291,11 +330,18 @@ class MainWindow(QMainWindow):
 
     def _update_buttons(self) -> None:
         s = self._streaming
+        can_connect = not s and self._has_devices
+        can_start = self._open and not s
         self.device_combo.setEnabled(not s)
         self.refresh_btn.setEnabled(not s)
-        self.connect_btn.setEnabled(not s and self._has_devices)
-        self.start_btn.setEnabled(self._open and not s)
+        self.connect_btn.setEnabled(can_connect)
+        self.start_btn.setEnabled(can_start)
         self.stop_btn.setEnabled(s)
+        # keep menu actions in sync with the toolbar
+        self.act_refresh.setEnabled(not s)
+        self.act_connect.setEnabled(can_connect)
+        self.act_start.setEnabled(can_start)
+        self.act_stop.setEnabled(s)
 
     def closeEvent(self, event):
         self.closeRequested.emit()
