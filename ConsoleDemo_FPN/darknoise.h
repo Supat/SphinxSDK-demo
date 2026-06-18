@@ -1,5 +1,5 @@
 /* darknoise.h
- * functions to subtract dark_img from a src_img and copy result to dest_img with SSE2 or parallel support
+ * subtract dark_img from src_img and copy the result to dest_img (OpenMP)
  * (c) 2016 MRC Systems GmbH
  * Author:sf
  * Version 1.0
@@ -7,33 +7,18 @@
 #ifndef DARKNOISE_H
 #define DARKNOISE_H
 
-#include <xmmintrin.h>
 // for compatibility with MSC
 #ifdef _MSC_VER
 #include <stdint.h>
-
-/*typedef __int8              int8_t;
-typedef __int16             int16_t;
-typedef __int32             int32_t;
-typedef __int64             int64_t;
-typedef unsigned __int8     uint8_t;
-typedef unsigned __int16    uint16_t;
-typedef unsigned __int32    uint32_t;
-typedef unsigned __int64    uint64_t;
-*/
 typedef unsigned char     u_char;
 typedef unsigned long     u_long;
-
-#include <emmintrin.h>
 #endif
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-void darknoise_bw_subtract_SSE2(u_char *dest_img,u_char *src_img, u_char * dark_img, int32_t width, int32_t height, int64_t img_size);
 void darknoise_bw_subtract(u_char *dest_img,u_char *src_img, u_char * dark_img, int32_t width, int32_t height, int64_t img_size);
-// only needed without SSE2
 #ifdef __cplusplus
 }
 #endif //extern "C"

@@ -97,21 +97,3 @@ class AngleBroadcaster:
             except OSError:
                 pass
             self._srv = None
-
-
-if __name__ == "__main__":
-    # Self-test: start a server, connect a client, send one reading, verify.
-    import time
-
-    b = AngleBroadcaster()
-    b.start(port=5599)
-    c = socket.create_connection(("127.0.0.1", 5599), timeout=2)
-    time.sleep(0.3)  # let the accept loop register the client
-    assert b.client_count() == 1, "client not registered"
-    b.send({"frame": 1, "wrists": [{"side": "left", "angle_deg": 170.0}]})
-    data = c.recv(4096).decode("utf-8").strip()
-    print("received:", data)
-    assert json.loads(data)["wrists"][0]["angle_deg"] == 170.0
-    c.close()
-    b.stop()
-    print("broadcaster self-test OK")

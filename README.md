@@ -92,7 +92,7 @@ next to the executable. Full details in [`QtDemo/README.md`](QtDemo/README.md).
 ## Repository layout
 
 - `ConsoleDemo_FPN/ConsoleDemo.cpp` — discovery, init, acquisition thread, BMP writer
-- `ConsoleDemo_FPN/darknoise.{h,cpp}` — dark-frame subtraction (OpenMP `darknoise_bw_subtract` + an SSE2 variant)
+- `ConsoleDemo_FPN/darknoise.{h,cpp}` — OpenMP dark-frame subtraction (`darknoise_bw_subtract`)
 - `ConsoleDemo_FPN/bayer.{h,cpp}` — bilinear demosaic for Bayer pixel formats
 - `ConsoleDemo_FPN/SphinxLib.h` — vendored copy of the SDK header (reference only)
 - `QtDemo/` — Qt GUI front-end (`Camera` class + `MainWindow`)

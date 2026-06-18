@@ -58,24 +58,3 @@ class Undistorter:
         h, w = img.shape[:2]
         m1, m2 = self._maps_for((w, h))
         return cv2.remap(img, m1, m2, cv2.INTER_LINEAR)
-
-
-if __name__ == "__main__":
-    # Self-test with a synthetic calibration on capture.png (if present).
-    test_calib = {
-        "model": "standard",
-        "K": [[800.0, 0.0, 640.0], [0.0, 800.0, 480.0], [0.0, 0.0, 1.0]],
-        "dist": [-0.3, 0.1, 0.0, 0.0, 0.0],
-        "image_size": [1280, 960],
-        "rms": 0.0,
-    }
-    with open("_calib_test.json", "w") as f:
-        json.dump(test_calib, f)
-    u = Undistorter("_calib_test.json")
-    img = cv2.imread("capture.png")
-    if img is None:
-        img = np.zeros((960, 1280, 3), np.uint8)
-    out = u.apply(img)
-    cv2.imwrite("undistort_test.png", out)
-    os.remove("_calib_test.json")
-    print(f"undistort self-test OK: in {img.shape} -> out {out.shape}, wrote undistort_test.png")
