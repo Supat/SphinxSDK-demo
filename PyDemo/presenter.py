@@ -53,6 +53,7 @@ class WristPresenter:
         view.broadcastToggled.connect(self.set_broadcast)
         view.generateBoardRequested.connect(self.generate_board)
         view.runCalibrationRequested.connect(self.run_calibration)
+        view.testBroadcastRequested.connect(self.test_broadcast)
         view.closeRequested.connect(self.shutdown)
 
         # poll the broadcast client count -> View
@@ -182,6 +183,17 @@ class WristPresenter:
             "Calibration launched in a separate window.\n\n"
             "Capture board views there (SPACE), press 'c' to save calib.json, "
             "then reconnect the camera here and enable Lens Correction.")
+
+    def test_broadcast(self):
+        if not self.broadcaster.is_running():
+            self.view.show_error("Test Broadcast", "Enable Broadcast TCP first.")
+            return
+        here = os.path.dirname(os.path.abspath(__file__))
+        port = self.broadcaster.port
+        flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+        subprocess.Popen([sys.executable, "tcp_client.py", "127.0.0.1", str(port)],
+                         cwd=here, creationflags=flags)
+        self.view.log_msg(f"Opened broadcast test client on 127.0.0.1:{port}")
 
     def shutdown(self):
         self.stop()

@@ -129,6 +129,7 @@ class MainWindow(QMainWindow):
     broadcastToggled = Signal(bool, int)   # (on, port)
     generateBoardRequested = Signal()
     runCalibrationRequested = Signal()
+    testBroadcastRequested = Signal()
     closeRequested = Signal()
 
     def __init__(self):
@@ -278,6 +279,9 @@ class MainWindow(QMainWindow):
         self.act_calibrate = QAction("Run Lens &Calibration…", self)
         self.act_calibrate.triggered.connect(self.runCalibrationRequested)
         tools_m.addAction(self.act_calibrate)
+        test_act = QAction("&Test Broadcast…", self)
+        test_act.triggered.connect(self.testBroadcastRequested)
+        tools_m.addAction(test_act)
 
         help_m = mb.addMenu("&Help")
         about_act = QAction("&About", self)
